@@ -60,18 +60,18 @@ std::string CIniLoad::GetSectionName(int nID)
 	return strRes;
 }
 
-DWORD CIniLoad::GetKeyAmount(string strSection)
+int CIniLoad::GetKeyAmount(string strSection)
 {
 	if (ini == NULL)
 	{
 		return 0;
 	}
-	DWORD nRes = ini->GetKeyAmount(strSection);
+	int nRes = (int)ini->GetKeyAmount(strSection);
 	return nRes;
 
 }
 
-std::string CIniLoad::GetKeyByIndex(string strSection, DWORD dwKeyIndex)
+std::string CIniLoad::GetKeyByIndex(string strSection, int dwKeyIndex)
 {
 	if (ini == NULL)
 	{

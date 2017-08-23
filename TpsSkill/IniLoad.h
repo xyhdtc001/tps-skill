@@ -19,11 +19,11 @@ public:
 
 	//
 	string GetSectionName(int nID);
-	int GetSectionNum() { return m_nSectionNum; };
+	int GetSectionNum() { return m_nSectionNum; }
 
 	//±éÀúkey
-	DWORD GetKeyAmount(string strSection);
-	string GetKeyByIndex(string strSection, DWORD dwKeyIndex);
+	int GetKeyAmount(string strSection);
+	string GetKeyByIndex(string strSection, int dwKeyIndex);
 
 protected:
 	CIni  *   ini;

@@ -647,9 +647,9 @@ void SkillParse::GetIniKeyAndValue(INIKEY &iniKeyValue,CIniLoad* pIniFile,string
 	}
 }
 
-void SkillParse::GetIniKeyAndValueAndRecoardToXml(INIKEY &iniKeyValue,CIniLoad* pIniFile,string strSection,string xmlNodeName)
+void SkillParse::GetIniKeyAndValueAndRecoardToXml(INIKEY &iniKeyValue,CIniLoad* pIniFile,string strSection,const string& strIniName)
 {
-	GetIniKeyAndValue(iniKeyValue,pIniFile,strSection,xmlNodeName);
+	GetIniKeyAndValue(iniKeyValue,pIniFile,strSection,strIniName);
 }
 
 void SkillParse::InsertKeyNameToXMl(const string & strIniName,const string & Keyname)
