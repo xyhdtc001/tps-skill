@@ -78,5 +78,9 @@ std::string CIniLoad::GetKeyByIndex(string strSection, int dwKeyIndex)
 		return 0;
 	}
 	string nRes = ini->GetKeyByIndex(strSection,dwKeyIndex);
+	if (nRes.size() > 0 )
+	{
+		m_setIniKey.insert(nRes);
+	}
 	return nRes;
 }

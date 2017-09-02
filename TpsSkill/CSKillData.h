@@ -38,3 +38,19 @@ typedef struct  _stPresentInfo
 
 
 typedef map<string, SKILLDESCRIBLEDATA > MAPSKILLINFO;
+
+typedef struct _tme_st
+{
+	_tme_st(){
+		bNoExit= false;
+	}
+	set<string> setPath;
+	set<string> bufName;
+	set<string> usedskill;
+	bool  bNoExit;
+}ST_TME;
+	
+typedef map<string,ST_TME>  STATETMEMAP;
+
+typedef map<string,set<string>>  VEC_SKILLTME;
+

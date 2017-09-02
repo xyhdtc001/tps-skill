@@ -5,22 +5,16 @@
 
 
 SkillParse::SkillParse():
-	m_pHeroSkill(0),m_pIniSkill(0),m_pIniSkiPresent(0),m_pIniLanguage(0),
+	m_pHeroSkill(0),m_pIniSkill(0),m_pIniSkiPresent(0),m_pIniLanguage(0),m_pStateIni(0),m_cuHeroInfo(0),
 	m_pDamage(0),m_pXmlRole(0),m_pXmlHero1101_C(0),m_pXmlHero1101_P(0),m_pXmlHero1201_C(0),m_pXmlHero1201_P(0),
 	m_pXmlHero1301_C(0),m_pXmlHero1301_P(0),m_pXmlHero1401_C(0),m_pXmlHero1401_P(0),m_pXmlHero1501_C(0),m_pXmlHero1501_P(0),
 	m_pXmlHero1801_C(0),m_pXmlHero1801_P(0),m_strWorkDir("")
 {
-	XMLDocument *m_pDocXmlKeyName = new XMLDocument;
 }
 
 
 SkillParse::~SkillParse()
 {
-	if (m_pDocXmlKeyName != NULL)
-	{
-		delete m_pDocXmlKeyName;
-		m_pDocXmlKeyName = NULL;
-	}
 }
 
 bool SkillParse::SetWorkDir(string strPath)
@@ -106,6 +100,18 @@ void SkillParse::InitConfigFile()
 	}
 	 strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\damage.ini";
 	m_pDamage = new CIniLoad(strSkillIniFile);
+	// state.ini
+	if (m_pStateIni != NULL)
+	{
+		delete m_pStateIni;
+		m_pStateIni = NULL;
+
+	}
+	strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\state.ini";
+	m_pStateIni = new CIniLoad(strSkillIniFile);
+
+	//初始化
+	ProcessStateAndDamageInfo();
 }
 
 void SkillParse::InitXmlFile()
@@ -161,11 +167,6 @@ void SkillParse::InitHeroSkillMap()
 			//骑士
 			m_Hero1401.insert(make_pair(strName, _st_skillDescrig));
 		}
-		else if (strSecName.find("15", 0) == 0)
-		{
-			//亡灵..
-
-		}
 		else if (nVocation == 8)
 		{
 			//影舞者
@@ -175,7 +176,7 @@ void SkillParse::InitHeroSkillMap()
 
 }
 
-void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID)
+void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroID)
 {
 	//加载xml文件.
 	string strP = m_strWorkDir + "\\presentations\\player\\hero_";
@@ -189,6 +190,7 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID
 	strC += strHeroID;
 	strC += "_c.prt";
 	m_curHeroID = strHeroID;
+	m_cuHeroInfo = &mapInfo;
 	XMLDocument *pDoc_c = new XMLDocument;
 	if (pDoc_c->LoadFile(strC.c_str())!=XML_SUCCESS)
 	{
@@ -231,6 +233,7 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID
 			string strNameID =  m_pIniSkill->GetValue(_skillInfo.strID,strKey.c_str());
 
 			strSkillName = m_pIniLanguage->GetValue("tps-skillconfig",strNameID.c_str());
+			_skillInfo.strName = strSkillName;
 		}
 		
 		//技能表现名称.
@@ -270,6 +273,36 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID
 			continue;
 		}
 
+		//技能名字识别检查.
+		string strSkillPingyin = "";
+		string strTemp;
+		do 
+		{
+			string strSkillTemp2;
+			strTemp = GetSegmentString(strActionName,"","_",strSkillTemp2);
+			if (strSkillTemp2!="sk" || strTemp.length()<=0)
+			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				break;
+			}
+			strTemp = GetSegmentString(strTemp,"","_",strSkillPingyin);
+			strSkillPingyin = TranToSkillName(strSkillPingyin);
+			if (strTemp.length()<=0)
+			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				break;
+			}
+			TrimString(strTemp);
+			if (strTemp!=m_curHeroID)
+			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				break;
+			}
+
+		} while (0);
+
+		string strSkill = m_curHeroID+"_";
+		m_mapSKillIDAndname[_skillInfo.strID] = strSkill +strSkillPingyin; //id--技能名字拼音.--
 
 
 		XMLNode *pCurCNode = mapCInfo[strActionName];
@@ -292,7 +325,7 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID
 			//遍历setName获取技能实际表现.
 			XMLElement *p100ActionEl = pDoc->NewElement("sk_100action");
 			XMLNode *p100Node =pSKillNewNode->InsertEndChild(p100ActionEl);
-			GetSkillPresentByName(pDoc,_100SetName,mapPInfo, p100Node);
+			GetSkillPresentByName(pDoc,_100SetName,mapPInfo, p100Node,_skillInfo.strID);
 		}
 		//技能200动作.
 		set < string> _200SetName;
@@ -310,7 +343,7 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO mapInfo, string strHeroID
 			}
 			XMLElement *p200ActionEl = pDoc->NewElement("sk_200action");
 			XMLNode *p200Node = pSKillNewNode->InsertEndChild(p200ActionEl);
-			GetSkillPresentByName(pDoc,_200SetName, mapPInfo, p200Node);
+			GetSkillPresentByName(pDoc,_200SetName, mapPInfo, p200Node,_skillInfo.strID);
 		}
 
 		++mapIter;
@@ -379,13 +412,28 @@ void SkillParse::LoopForTreeNodePresentation(XMLNode *pRoot, set<string>& setNam
 	}
 }
 
-void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, map<string, XMLNode*> &mapInfoP, XMLNode* pDesNode)
+void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, map<string, XMLNode*> &mapInfoP, XMLNode* pDesNode,const string &strSkillID)
 {
 	set<string>::iterator setIter = setName.begin();
 	
 	while (setIter != setName.end())
 	{
 		string strKeyName = (*setIter);
+
+		//识别名字.
+		string strSkillPingyin = strKeyName;
+		string strHero;
+		if (!GetSkillName(strSkillPingyin,strHero))
+		{
+			m_mapErrorInfo[strSkillID].push_back("p_prt name Error");
+		}
+		string strAllName = strHero+"_"+strSkillPingyin;
+		if (strAllName != m_mapSKillIDAndname[strSkillID])
+		{
+			m_mapErrorInfo[strSkillID].push_back("p_prt name and c_prt No march");
+		}
+		strSkillPingyin = m_mapSKillIDAndname[strSkillID];
+
 		if (mapInfoP.find(strKeyName)==mapInfoP.end())
 		{
 			++setIter;
@@ -498,35 +546,55 @@ void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, m
 			pCurNode->ToElement()->SetAttribute("usdtgapresent", szUsdtga);
 		}
 		//event
-		if (!szUsdcast&&!szUsdchant&&!szUsdseq)
-		{
+
 			//遍历下child
 			XMLElement* pChildNode = pSkillEl->FirstChildElement("FrameEvent");
 			while (pChildNode!=NULL)
 			{
-				if (pChildNode->Attribute("type","EmptyFrameEvent")&&!pChildNode->Attribute("triggerByProgram","true"))
+				if (!szUsdcast&&!szUsdchant&&!szUsdseq)
 				{
-					if (pChildNode->Attribute("EventID","24000")&&pChildNode->Attribute("Frame"))
+					if (pChildNode->Attribute("type","EmptyFrameEvent")&&!pChildNode->Attribute("triggerByProgram","true"))
 					{
-						pCurNode->ToElement()->SetAttribute("event24000",pChildNode->Attribute("Frame"));
-					}
-					if (pChildNode->Attribute("EventID","25000")&&pChildNode->Attribute("Frame"))
-					{
-						pCurNode->ToElement()->SetAttribute("event25000",pChildNode->Attribute("Frame"));
-					}
-					if (pChildNode->Attribute("EventID","26000")&&pChildNode->Attribute("Frame"))
-					{
-						pCurNode->ToElement()->SetAttribute("event26000",pChildNode->Attribute("Frame"));
-					}
-					if (pChildNode->Attribute("EventID","30000")&&pChildNode->Attribute("Frame"))
-					{
-						pCurNode->ToElement()->SetAttribute("event30000",pChildNode->Attribute("Frame"));
+						if (pChildNode->Attribute("EventID","24000")&&pChildNode->Attribute("Frame"))
+						{
+							pCurNode->ToElement()->SetAttribute("event24000",pChildNode->Attribute("Frame"));
+						}
+						if (pChildNode->Attribute("EventID","25000")&&pChildNode->Attribute("Frame"))
+						{
+							pCurNode->ToElement()->SetAttribute("event25000",pChildNode->Attribute("Frame"));
+						}
+						if (pChildNode->Attribute("EventID","26000")&&pChildNode->Attribute("Frame"))
+						{
+							pCurNode->ToElement()->SetAttribute("event26000",pChildNode->Attribute("Frame"));
+						}
+						if (pChildNode->Attribute("EventID","30000")&&pChildNode->Attribute("Frame"))
+						{
+							pCurNode->ToElement()->SetAttribute("event30000",pChildNode->Attribute("Frame"));
+						}
 					}
 				}
+				//TME光效处理.
+				if (pChildNode->Attribute("type","TmeEvent"))
+				{
+					//
+					XMLElement* pChildTmeNode = pChildNode->FirstChildElement("Tme");
+					while(pChildTmeNode != NULL)
+					{
+						if (pChildTmeNode->Attribute("path"))
+						{
+							m_vecSkillTme[strSkillID].insert(pChildTmeNode->Attribute("path"));
+						}					
+						pChildTmeNode = pChildTmeNode->NextSiblingElement("Tme");
+					}
+					
+				}
+
+				
 				pChildNode = pChildNode->NextSiblingElement("FrameEvent");
 			}
 
-			//
+		if (!szUsdcast&&!szUsdchant&&!szUsdseq)
+		{
 			pCurNode->ToElement()->SetAttribute("usdself", strKeyName.c_str());
 			{
 				string str24000Fps;
@@ -561,7 +629,12 @@ void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, m
 				}
 			}
 		}
-		//tme
+
+		//状态光效处理.
+		ProceeStateTme(strSkillID,mapInfoP);
+
+
+
 
 		//child..
 		++setIter;
@@ -639,11 +712,6 @@ void SkillParse::GetIniKeyAndValue(INIKEY &iniKeyValue,CIniLoad* pIniFile,string
 		string strKey = pIniFile->GetKeyByIndex(strSection,nIndex);
 		string strKeyValue = pIniFile->GetValue(strSection,strKey);
 		iniKeyValue.insert(make_pair(strKey,strKeyValue));
-		if (strIniname.size()>0&&m_pDocXmlKeyName!=NULL)
-		{
-			//存入XML节点.
-			InsertKeyNameToXMl(strIniname,strKey);
-		}
 	}
 }
 
@@ -655,5 +723,354 @@ void SkillParse::GetIniKeyAndValueAndRecoardToXml(INIKEY &iniKeyValue,CIniLoad* 
 void SkillParse::InsertKeyNameToXMl(const string & strIniName,const string & Keyname)
 {
 	//避免重复...
+
+}
+
+
+//处理state.ini,damage.ini.获取数据,(目前取技能光效.)
+void SkillParse::ProcessStateAndDamageInfo()
+{
+	ProcessStateAndDamageInfoByIni(m_pStateIni,m_mapStateTme);
+	ProcessStateAndDamageInfoByIni(m_pDamage,m_mapStateTme);
+}
+
+
+void SkillParse::ProcessStateAndDamageInfoByIni(CIniLoad* pIni ,STATETMEMAP &mapData)
+{
+	if (pIni == NULL)
+	{
+		return;
+	}
+	//遍历INI.
+	int nSectionNum = pIni->GetSectionNum();
+	for (int i = 0 ;i < nSectionNum ;++i)
+	{
+		string strSection = pIni->GetSectionName(i);
+		string strbufname =pIni->GetValue(strSection,"describe");
+		//目前处理. onAddFunc onDelFunc  skilleffect skill
+		
+		{
+			string strValue = pIni->GetValue(strSection,"onAddFunc");
+			TrimString(strValue);
+			if (strValue.size() > 0)
+			{
+				string strTemp = strValue;
+				string keyString = "AddStatePresentation";
+				int nPos = strTemp.find(keyString.c_str());
+				while(nPos != string::npos)
+				{
+					if (strTemp.length()<= nPos+keyString.length())
+					{
+						break;
+					}
+					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+					//取第二个参数.
+					string strPresentName;
+					strTemp = GetSegmentString(strTemp,";",")",strPresentName);
+					strValue = strPresentName;
+					string strHero ;
+					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+					{
+						//加入技能数据.
+						strPresentName=strHero+"_"+strPresentName;
+						mapData[strPresentName].setPath.insert(strValue);
+						mapData[strPresentName].bufName.insert(strbufname);
+					}
+					else if (strValue.length()>0)
+					{
+						mapData[strValue].setPath.insert(strValue);
+					}
+					nPos = strTemp.find(keyString);
+				}
+			}
+		}
+		//ondel
+		{
+			string strValue = pIni->GetValue(strSection,"onDelFunc");
+			TrimString(strValue);
+			if (strValue.size() > 0)
+			{
+				string strTemp = strValue;
+				string keyString = "AddStatePresentation";
+				int nPos = strTemp.find(keyString.c_str());
+				while(nPos != string::npos)
+				{
+					if (strTemp.length()<= nPos+keyString.length())
+					{
+						break;
+					}
+					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+					//取第二个参数.
+					string strPresentName;
+					strTemp = GetSegmentString(strTemp,";",")",strPresentName);
+					strValue = strPresentName;
+					string strHero ;
+					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+					{
+						//加入技能数据.
+						strPresentName=strHero+"_"+strPresentName;
+						mapData[strPresentName].setPath.insert(strValue);
+						mapData[strPresentName].bufName.insert(strbufname);
+						
+					}
+					else if (strValue.length()>0)
+					{
+						mapData[strValue].setPath.insert(strValue);
+					}
+					nPos = strTemp.find(keyString);
+				}
+			}
+		}
+		//skill
+		{
+			string strValue = pIni->GetValue(strSection,"skill");
+			TrimString(strValue);
+			if (strValue.size() > 0)
+			{
+				string strTemp = strValue;
+				string keyString = "DoSkillEffect";
+				int nPos = strTemp.find(keyString.c_str());
+				while(nPos != string::npos)
+				{
+					if (strTemp.length()<= nPos+keyString.length())
+					{
+						break;
+					}
+					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+					//取第二个参数.
+					string strPresentName;
+					strTemp = GetSegmentString(strTemp,",",")",strPresentName);
+					strValue = strPresentName;
+					string strHero ;
+					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+					{
+						//加入技能数据.
+						strPresentName=strHero+"_"+strPresentName;
+						mapData[strPresentName].setPath.insert(strValue);
+						mapData[strPresentName].bufName.insert(strbufname);
+					}
+					else if (strValue.length()>0)
+					{
+						mapData[strValue].setPath.insert(strValue);
+					}
+					nPos = strTemp.find(keyString);
+				}
+			}
+		}
+		//skilleffect
+		{
+			string strValue = pIni->GetValue(strSection,"skilleffect");
+			TrimString(strValue);
+			if (strValue.size() > 0)
+			{
+				string strTemp = strValue;
+				string keyString = "DoSkillEffect";
+				int nPos = strTemp.find(keyString.c_str());
+				while(nPos != string::npos)
+				{
+					if (strTemp.length()<= nPos+keyString.length())
+					{
+						break;
+					}
+					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+					//取第二个参数.
+					string strPresentName;
+					strTemp = GetSegmentString(strTemp,",",")",strPresentName);
+					strValue = strPresentName;
+					string strHero ;
+					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+					{
+						//加入技能数据.
+						strPresentName=strHero+"_"+strPresentName;
+						mapData[strPresentName].setPath.insert(strValue);
+						mapData[strPresentName].bufName.insert(strbufname);
+					}
+					else if (strValue.length()>0)
+					{
+						mapData[strValue].setPath.insert(strValue);
+					}
+					nPos = strTemp.find(keyString);
+				}
+			}
+		}
+
+
+
+
+	}
+}
+
+
+void SkillParse::ProceeStateTme(string strSkllID,map<string, XMLNode*> &mapInfoP)
+{
+	if (m_mapSKillIDAndname.find(strSkllID) == m_mapSKillIDAndname.end())
+	{
+		return;
+	}
+	string skillPingyin = m_mapSKillIDAndname[strSkllID];
+	if (m_mapStateTme.find(skillPingyin)==m_mapStateTme.end())
+	{
+		return;
+	}
+	set<string>::iterator stateIter = m_mapStateTme[skillPingyin].setPath.begin();
+	while(stateIter != m_mapStateTme[skillPingyin].setPath.end())
+	{
+		if (mapInfoP.find(*stateIter)==mapInfoP.end())
+		{
+			++stateIter;
+			m_mapStateTme[skillPingyin].bNoExit = true;
+			continue;
+		}
+		GetSkillPresentTmePathByName(strSkllID,mapInfoP[(*stateIter)]);
+		m_mapStateTme[skillPingyin].usedskill.insert(strSkllID);
+		++stateIter;
+	}
+}
+
+void SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
+{
+	if (xmlNode == NULL )
+	{
+		return;
+	}
+	XMLElement *pChild = xmlNode->FirstChildElement("FrameEvent");
+	while(pChild != NULL)
+	{
+		//TME光效处理.
+		if (pChild->Attribute("type","TmeEvent"))
+		{
+			//
+			XMLElement* pChildTmeNode = pChild->FirstChildElement("Tme");
+			while(pChildTmeNode != NULL)
+			{
+				if (pChildTmeNode->Attribute("path"))
+				{
+					m_vecSkillTme[strSkllID].insert(pChildTmeNode->Attribute("path"));
+				}					
+				pChildTmeNode = pChildTmeNode->NextSiblingElement("Tme");
+			}
+
+		}
+		pChild= pChild->NextSiblingElement("FrameEvent");
+	}
+}
+
+void SkillParse::outPutTmeInfo()
+{
+	XMLDocument xmlDoc;
+
+	XMLElement *pEl = xmlDoc.NewElement("SkillTme");
+	XMLNode *pRootNode = xmlDoc.InsertFirstChild(pEl);
+	// 输出TME信息.
+	VEC_SKILLTME::iterator skillIter = m_vecSkillTme.begin();
+	while(skillIter != m_vecSkillTme.end())
+	{
+		XMLElement *pTmeNewNode  = NULL;
+		XMLNode *pSKillNewNode= NULL;
+		if (skillIter->second.size()>0)
+		{
+			string strNodename = "tme_"+skillIter->first;
+			pTmeNewNode = xmlDoc.NewElement(strNodename.c_str());
+			if (pTmeNewNode == NULL)
+			{
+				++skillIter;
+				//deeeeeorre
+				continue;
+			}
+			pSKillNewNode = pRootNode->InsertEndChild(pTmeNewNode);
+			string strKey= "skillname";
+			string strNameID =  m_pIniSkill->GetValue(skillIter->first.c_str(),strKey.c_str());
+
+			string strSkillName = m_pIniLanguage->GetValue("tps-skillconfig",strNameID.c_str());
+
+			pSKillNewNode->ToElement()->SetAttribute("name",strSkillName.c_str());
+		}
+
+		set<string>::iterator pathIter = skillIter->second.begin();
+		while(pathIter!=skillIter->second.end()&&pSKillNewNode)
+		{
+			XMLElement *pPathEl = xmlDoc.NewElement("path");
+			if (pPathEl == NULL)
+			{
+				++pathIter;
+				continue;
+			}
+			XMLNode *pPathNode =  pSKillNewNode->InsertEndChild(pPathEl);
+			if (pPathNode->ToElement())
+			{
+				pPathNode->ToElement()->SetAttribute("path",(*pathIter).c_str());
+			}
+			++pathIter;
+		}
+		++skillIter;
+
+	}
+	string strNewFile = m_strWorkDir;
+	strNewFile += "\\processSkillRes\\skill_tme.xml";
+	xmlDoc.SaveFile(strNewFile.c_str());
+}
+
+void SkillParse::outPutStateTmeInfo()
+{
+	XMLDocument xmlDoc;
+
+	XMLElement *pEl = xmlDoc.NewElement("StateTme");
+	XMLNode *pRootNode = xmlDoc.InsertFirstChild(pEl);
+	// 输出TME信息.
+	STATETMEMAP::iterator skillIter = m_mapStateTme.begin();
+	while(skillIter != m_mapStateTme.end())
+	{
+		XMLElement *pTmeNewNode  = NULL;
+
+		string strNodename = "tmelist";
+		pTmeNewNode = xmlDoc.NewElement(strNodename.c_str());
+		if (pTmeNewNode != NULL)
+		{
+			pRootNode->InsertEndChild(pTmeNewNode);
+			
+			pTmeNewNode->SetAttribute("name",skillIter->first.c_str());
+
+			string strvalue;
+			ComBinString(strvalue,"|",skillIter->second.bufName);
+			pTmeNewNode->SetAttribute("buffDescrible",strvalue.c_str());
+
+			ComBinString(strvalue,"|",skillIter->second.setPath);
+			pTmeNewNode->SetAttribute("statePresentname",strvalue.c_str());
+
+			strvalue = "";
+			set<string>::iterator setIter = skillIter->second.usedskill.begin();
+			while(setIter != skillIter->second.usedskill.end())
+			{
+				string strNameID = m_pIniSkill->GetValue(*setIter,"skillname");
+				if (strNameID.length()>0)
+				{
+					strNameID = m_pIniLanguage->GetValue("tps-skillconfig",strNameID.c_str());
+					strvalue+=strNameID+"|";
+				}
+				
+				++setIter;
+			}
+			if (strvalue.length()>1)
+			{
+				strvalue = strvalue.substr(0,strvalue.length()-1);
+			}
+			pTmeNewNode->SetAttribute("usedskillname",strvalue.c_str());
+
+
+			if (skillIter->second.bNoExit)
+			{
+				pTmeNewNode->SetAttribute("error_noExist","1");
+			}
+		}
+		++skillIter;
+
+	}
+	string strNewFile = m_strWorkDir;
+	strNewFile += "\\processSkillRes\\State_tme.xml";
+	xmlDoc.SaveFile(strNewFile.c_str());
+}
+
+void SkillParse::outPutErrorInfo()
+{
 
 }
