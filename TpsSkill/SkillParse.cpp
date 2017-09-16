@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "SkillParse.h"
 #include "IniLoad.h"
+#include <direct.h> 
+#include "FileLineScan.h"
 
 
 
@@ -10,6 +12,12 @@ SkillParse::SkillParse():
 	m_pXmlHero1301_C(0),m_pXmlHero1301_P(0),m_pXmlHero1401_C(0),m_pXmlHero1401_P(0),m_pXmlHero1501_C(0),m_pXmlHero1501_P(0),
 	m_pXmlHero1801_C(0),m_pXmlHero1801_P(0),m_strWorkDir("")
 {
+	m_CommonTmeVec.clear();
+	m_NoexistTmeVec.clear();
+	m_mapProcessedTmePath.clear();
+	m_vecSkillTme.clear();
+	m_mapErrorInfo.clear();
+	m_mapSKillIDAndname.clear();
 }
 
 
@@ -23,6 +31,9 @@ bool SkillParse::SetWorkDir(string strPath)
 	InitConfigFile();
 	//分类英雄技能.
 	InitHeroSkillMap();
+
+	string strDir = strPath+"\\processSkillRes\\";
+	_mkdir(strDir.c_str())  ;
 	return true;
 }
 
@@ -139,41 +150,148 @@ void SkillParse::InitHeroSkillMap()
 		}
 
 		string strName = m_pHeroSkill->GetValue(strSecName,"talent");
-		SKILLDESCRIBLEDATA _st_skillDescrig = {0};
-		_st_skillDescrig.strID = strName;
-		//获取INI值
-		GetIniKeyAndValue(_st_skillDescrig.vec_key,m_pHeroSkill,strName);
-		if (strSecName.length() != 8)
-		{
-			continue;
-		}
-		if (nVocation == 1 )
-		{
-			//战士
-			m_Hero1101.insert(make_pair(strName, _st_skillDescrig));
-		}
-		else if(nVocation == 2)
-		{
-			//法师
-			m_Hero1201.insert(make_pair(strName, _st_skillDescrig));
-		}
-		else if (nVocation == 3)
-		{
-			//木事
-			m_Hero1301.insert(make_pair(strName, _st_skillDescrig));
-		}
-		else if (nVocation == 4)
-		{
-			//骑士
-			m_Hero1401.insert(make_pair(strName, _st_skillDescrig));
-		}
-		else if (nVocation == 8)
-		{
-			//影舞者
-			m_Hero1801.insert(make_pair(strName, _st_skillDescrig));
-		}
+
+		
+		InsetToHeroSkillMap(strName,nVocation);
 	}
 
+}
+void SkillParse::InsetToHeroSkillMap(string skillID,int nVocation)
+{
+
+	SKILLDESCRIBLEDATA _st_skillDescrig = {0};
+	_st_skillDescrig.strID = skillID;
+	//获取INI值
+	GetIniKeyAndValue(_st_skillDescrig.vec_key,m_pHeroSkill,skillID);
+	if (nVocation == 1 )
+	{
+		//战士
+		m_Hero1101.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	else if(nVocation == 2)
+	{
+		//法师
+		m_Hero1201.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	else if (nVocation == 3)
+	{
+		//木事
+		m_Hero1301.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	else if (nVocation == 4)
+	{
+		//骑士
+		m_Hero1401.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	else if (nVocation == 8)
+	{
+		//影舞者
+		m_Hero1801.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	//nextskill_1 nextskill_2
+	string strValue =  m_pIniSkill->GetValue(skillID,"nextskill_1");
+	if (strValue.size()>0)
+	{
+		InsetToHeroSkillMap(strValue,nVocation);
+	}
+	strValue =  m_pIniSkill->GetValue(skillID,"nextskill_2");
+	if (strValue.size()>0)
+	{
+		InsetToHeroSkillMap(strValue,nVocation);
+	}
+}
+
+/*
+ *	查找通用tme
+ */
+void SkillParse::ProceeCommonTme()
+{
+	//加载通用Prt
+	string strCommonPrt = m_strWorkDir+"\\presentations\\common\\common.prt";
+
+// 	string strCommonRidePrt = m_strWorkDir+"\\presentations\\common\\commonride.prt";
+// 	AddTmePathInPrt(strCommonRidePrt);
+	XMLDocument *pDoc_p = new XMLDocument;
+	if (pDoc_p->LoadFile(strCommonPrt.c_str()) != XML_SUCCESS)
+	{
+		return;
+	}
+	XMLNode *pNode_p = pDoc_p->FirstChild();
+	map<string, XMLNode*>mapCommonInfo;
+
+	LoopXMlForInfo(pNode_p,mapCommonInfo);
+
+	//获取state中的comon present
+	STATETMEMAP::iterator skillIter = m_mapStateTme.begin();
+	int nIndex= 0;
+	char szNameID[100];
+	while(skillIter != m_mapStateTme.end())
+	{
+		nIndex++;
+		sprintf(szNameID,"Common%d",nIndex);
+		string strCommonID = szNameID;
+
+		string strvalue;
+		strvalue = "";
+		if (skillIter->second.usedskill.size() > 0)
+		{
+			++skillIter;
+			continue;
+		}
+		string strPresentName = skillIter->first;
+		string strRealName;
+		GetSegmentString(strPresentName,"",";",strRealName);
+		if (strRealName.length()<=0)
+		{
+			m_mapErrorInfo[strCommonID].push_back("start|");
+			m_mapErrorInfo[strCommonID].push_back("commond name error");
+			m_mapErrorInfo[strCommonID].push_back(skillIter->first);
+			m_mapErrorInfo[strCommonID].push_back("|End")	;	
+			++skillIter;
+			continue;
+		}
+
+		if (mapCommonInfo.find(strRealName) == mapCommonInfo.end())
+		{
+			m_mapErrorInfo[strCommonID].push_back("start|");
+			m_mapErrorInfo[strCommonID].push_back("commond name No Find");
+			m_mapErrorInfo[strCommonID].push_back(skillIter->first);
+			m_mapErrorInfo[strCommonID].push_back("|End")	;	
+			++skillIter;
+			continue;
+		}
+		XMLNode* pNode= mapCommonInfo[strRealName];
+		bool bRes = GetSkillPresentTmePathByName("common",pNode);
+		if (bRes)
+		{
+			skillIter->second.usedskill.insert("common");
+		}
+		++skillIter;
+	}
+
+// 	//贴花。
+// 	string strDirPath = m_strWorkDir+"\\effect\\decal\\";
+// 	AddTmeFile(strDirPath);
+// 	//按钮
+// 	strDirPath = m_strWorkDir+"\\effect\\ui\\";
+// 	AddTmeFile(strDirPath);
+}
+
+/*
+ *	prt文件中的tme直接加入通用数据.
+ */
+void SkillParse::AddTmePathInPrt(string strPath)
+{
+
+}
+
+/*
+ *	目录下的tme全部加入common
+ */
+void SkillParse::AddTmeFile(string strPath)
+{
+	//扫描目录下的 tme文件.
+	_findFile("*.tme",strPath.c_str(),m_CommonTmeVec);
 }
 
 void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroID)
@@ -282,20 +400,29 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroI
 			strTemp = GetSegmentString(strActionName,"","_",strSkillTemp2);
 			if (strSkillTemp2!="sk" || strTemp.length()<=0)
 			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("start|");
 				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				m_mapErrorInfo[_skillInfo.strID].push_back(strActionName);
+				m_mapErrorInfo[_skillInfo.strID].push_back("|End")	;	
 				break;
 			}
 			strTemp = GetSegmentString(strTemp,"","_",strSkillPingyin);
 			strSkillPingyin = TranToSkillName(strSkillPingyin);
 			if (strTemp.length()<=0)
 			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("start|");
 				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				m_mapErrorInfo[_skillInfo.strID].push_back(strActionName);
+				m_mapErrorInfo[_skillInfo.strID].push_back("|End");
 				break;
 			}
 			TrimString(strTemp);
 			if (strTemp!=m_curHeroID)
 			{
+				m_mapErrorInfo[_skillInfo.strID].push_back("start|");
 				m_mapErrorInfo[_skillInfo.strID].push_back("crtName_err!");
+				m_mapErrorInfo[_skillInfo.strID].push_back(strActionName);
+				m_mapErrorInfo[_skillInfo.strID].push_back("|End");
 				break;
 			}
 
@@ -348,6 +475,9 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroI
 
 		++mapIter;
 	}
+
+	//处理state中名字不规范的字段.
+	ProcessReMainStateTme(mapPInfo);
 
 	//保存
 	string strNewFile = m_strWorkDir;
@@ -423,16 +553,62 @@ void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, m
 		//识别名字.
 		string strSkillPingyin = strKeyName;
 		string strHero;
-		if (!GetSkillName(strSkillPingyin,strHero))
+		bool bError = false;
+		do 
 		{
-			m_mapErrorInfo[strSkillID].push_back("p_prt name Error");
-		}
-		string strAllName = strHero+"_"+strSkillPingyin;
-		if (strAllName != m_mapSKillIDAndname[strSkillID])
-		{
-			m_mapErrorInfo[strSkillID].push_back("p_prt name and c_prt No march");
-		}
-		strSkillPingyin = m_mapSKillIDAndname[strSkillID];
+			int nCharNum = getCharNum(strSkillPingyin,'_');
+			if ( nCharNum != 2 && nCharNum != 1 )
+			{
+				if (!bError)
+				{
+					m_mapErrorInfo[strSkillID].push_back("start|");
+					m_mapErrorInfo[strSkillID].push_back("p_prt _Number Error");
+					m_mapErrorInfo[strSkillID].push_back(strKeyName);
+					m_mapErrorInfo[strSkillID].push_back("|End");
+					bError = true;
+				}
+			}
+			string strTemp = m_curHeroID+"_";
+			if (strSkillPingyin.find(strTemp)!=0)
+			{
+				if (!bError)
+				{
+					m_mapErrorInfo[strSkillID].push_back("start|");
+					m_mapErrorInfo[strSkillID].push_back("p_prt no skill Error");
+					m_mapErrorInfo[strSkillID].push_back(strKeyName);
+					m_mapErrorInfo[strSkillID].push_back("|End");
+					bError = true;
+				}	
+			}
+			if (!GetSkillName(strSkillPingyin,strHero))
+			{
+				if (!bError)
+				{
+					m_mapErrorInfo[strSkillID].push_back("start|");
+					m_mapErrorInfo[strSkillID].push_back("p_prt name Error");
+					m_mapErrorInfo[strSkillID].push_back(strKeyName);
+					m_mapErrorInfo[strSkillID].push_back("|End");
+					bError = true;
+				}
+			
+			}
+			string strAllName = strHero+"_"+strSkillPingyin;
+			if (strAllName != m_mapSKillIDAndname[strSkillID])
+			{
+				if (!bError)
+				{
+					m_mapErrorInfo[strSkillID].push_back("start|");
+					m_mapErrorInfo[strSkillID].push_back("p_prt name and c_prt No march");
+					m_mapErrorInfo[strSkillID].push_back(strKeyName);
+					m_mapErrorInfo[strSkillID].push_back(m_mapSKillIDAndname[strSkillID]);
+					m_mapErrorInfo[strSkillID].push_back("|End");
+					bError = true;
+				}
+				
+			}
+		} while (0);
+
+		//m_mapSKillIDAndname[strSkillID] = strSkillPingyin ;
 
 		if (mapInfoP.find(strKeyName)==mapInfoP.end())
 		{
@@ -631,10 +807,8 @@ void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, m
 		}
 
 		//状态光效处理.
-		ProceeStateTme(strSkillID,mapInfoP);
-
-
-
+		strSkillPingyin =m_curHeroID+"_"+strSkillPingyin;
+		ProceeStateTme(strSkillPingyin,strSkillID,mapInfoP);
 
 		//child..
 		++setIter;
@@ -754,33 +928,100 @@ void SkillParse::ProcessStateAndDamageInfoByIni(CIniLoad* pIni ,STATETMEMAP &map
 			TrimString(strValue);
 			if (strValue.size() > 0)
 			{
-				string strTemp = strValue;
-				string keyString = "AddStatePresentation";
-				int nPos = strTemp.find(keyString.c_str());
-				while(nPos != string::npos)
 				{
-					if (strTemp.length()<= nPos+keyString.length())
+					string strTemp = strValue;
+					string keyString = "AddStatePresentation";
+					int nPos = strTemp.find(keyString.c_str());
+					while(nPos != string::npos)
 					{
-						break;
+						if (strTemp.length()<= nPos+keyString.length())
+						{
+							break;
+						}
+						strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+						//取参数.
+						string strFunParam;
+						strTemp = GetSegmentString(strTemp,"(",")",strFunParam);
+
+						string strPresentName;
+						int nParamIndex= 0;
+						while(strFunParam.length()>0)
+						{
+							strFunParam = GetSegmentString(strFunParam,"",";",strPresentName);
+							if (nParamIndex==0)
+							{
+								//第二个参数开始.
+								nParamIndex++;
+								continue;
+							}
+							if (nParamIndex>1)
+							{
+								break;
+							}
+							nParamIndex++;
+
+							strValue = strPresentName;
+							string strHero ;
+							if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+							{
+								//加入技能数据.
+								strPresentName=strHero+"_"+strPresentName;
+								mapData[strPresentName].setPath.insert(strValue);
+								mapData[strPresentName].bufName.insert(strbufname);
+							}
+							else if (strValue.length()>0)
+							{
+								mapData[strValue].setPath.insert(strValue);
+							}
+						}
+						nPos = strTemp.find(keyString);
 					}
-					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
-					//取第二个参数.
-					string strPresentName;
-					strTemp = GetSegmentString(strTemp,";",")",strPresentName);
-					strValue = strPresentName;
-					string strHero ;
-					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+				}
+				{
+					//查找AddStageStatePresentation
+					string strTemp = strValue;
+					string keyString = "AddStageStatePresentation";
+					int nPos = strTemp.find(keyString.c_str());
+					while(nPos != string::npos)
 					{
-						//加入技能数据.
-						strPresentName=strHero+"_"+strPresentName;
-						mapData[strPresentName].setPath.insert(strValue);
-						mapData[strPresentName].bufName.insert(strbufname);
+						if (strTemp.length()<= nPos+keyString.length())
+						{
+							break;
+						}
+						strTemp = strTemp.substr(nPos,strTemp.length()-nPos);
+						//取参数.
+						string strFunParam;
+						strTemp = GetSegmentString(strTemp,"(",")",strFunParam);
+
+						string strPresentName;
+						int nParamIndex= 0;
+						while(strFunParam.length()>0)
+						{
+							strFunParam = GetSegmentString(strFunParam,"",";",strPresentName);
+							if (nParamIndex==0)
+							{
+								//第二个参数开始.
+								nParamIndex++;
+								continue;
+							}
+							nParamIndex++;
+
+							strValue = strPresentName;
+							string strHero ;
+							if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+							{
+								//加入技能数据.
+								strPresentName=strHero+"_"+strPresentName;
+								mapData[strPresentName].setPath.insert(strValue);
+								mapData[strPresentName].bufName.insert(strbufname);
+							}
+							else if (strValue.length()>0)
+							{
+								mapData[strValue].setPath.insert(strValue);
+							}
+						}
+						nPos = strTemp.find(keyString);
 					}
-					else if (strValue.length()>0)
-					{
-						mapData[strValue].setPath.insert(strValue);
-					}
-					nPos = strTemp.find(keyString);
 				}
 			}
 		}
@@ -790,34 +1031,100 @@ void SkillParse::ProcessStateAndDamageInfoByIni(CIniLoad* pIni ,STATETMEMAP &map
 			TrimString(strValue);
 			if (strValue.size() > 0)
 			{
-				string strTemp = strValue;
-				string keyString = "AddStatePresentation";
-				int nPos = strTemp.find(keyString.c_str());
-				while(nPos != string::npos)
 				{
-					if (strTemp.length()<= nPos+keyString.length())
+					string strTemp = strValue;
+					string keyString = "AddStatePresentation";
+					int nPos = strTemp.find(keyString.c_str());
+					while(nPos != string::npos)
 					{
-						break;
+						if (strTemp.length()<= nPos+keyString.length())
+						{
+							break;
+						}
+						strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
+						//取参数.
+						string strFunParam;
+						strTemp = GetSegmentString(strTemp,"(",")",strFunParam);
+
+						string strPresentName;
+						int nParamIndex= 0;
+						while(strFunParam.length()>0)
+						{
+							strFunParam = GetSegmentString(strFunParam,"",";",strPresentName);
+							if (nParamIndex==0)
+							{
+								//第二个参数开始.
+								nParamIndex++;
+								continue;
+							}
+							if (nParamIndex>1)
+							{
+								break;
+							}
+							nParamIndex++;
+
+							strValue = strPresentName;
+							string strHero ;
+							if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+							{
+								//加入技能数据.
+								strPresentName=strHero+"_"+strPresentName;
+								mapData[strPresentName].setPath.insert(strValue);
+								mapData[strPresentName].bufName.insert(strbufname);
+							}
+							else if (strValue.length()>0)
+							{
+								mapData[strValue].setPath.insert(strValue);
+							}
+						}
+						nPos = strTemp.find(keyString);
 					}
-					strTemp = strTemp.substr(nPos+keyString.length(),strTemp.length()-nPos-keyString.length());
-					//取第二个参数.
-					string strPresentName;
-					strTemp = GetSegmentString(strTemp,";",")",strPresentName);
-					strValue = strPresentName;
-					string strHero ;
-					if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+				}
+				{
+					//查找AddStageStatePresentation
+					string strTemp = strValue;
+					string keyString = "AddStageStatePresentation";
+					int nPos = strTemp.find(keyString.c_str());
+					while(nPos != string::npos)
 					{
-						//加入技能数据.
-						strPresentName=strHero+"_"+strPresentName;
-						mapData[strPresentName].setPath.insert(strValue);
-						mapData[strPresentName].bufName.insert(strbufname);
-						
+						if (strTemp.length()<= nPos+keyString.length())
+						{
+							break;
+						}
+						strTemp = strTemp.substr(nPos,strTemp.length()-nPos);
+						//取参数.
+						string strFunParam;
+						strTemp = GetSegmentString(strTemp,"(",")",strFunParam);
+
+						string strPresentName;
+						int nParamIndex= 0;
+						while(strFunParam.length()>0)
+						{
+							strFunParam = GetSegmentString(strFunParam,"",";",strPresentName);
+							if (nParamIndex==0)
+							{
+								//第二个参数开始.
+								nParamIndex++;
+								continue;
+							}
+							nParamIndex++;
+
+							strValue = strPresentName;
+							string strHero ;
+							if (strPresentName.length()>0 &&GetSkillName(strPresentName,strHero))
+							{
+								//加入技能数据.
+								strPresentName=strHero+"_"+strPresentName;
+								mapData[strPresentName].setPath.insert(strValue);
+								mapData[strPresentName].bufName.insert(strbufname);
+							}
+							else if (strValue.length()>0)
+							{
+								mapData[strValue].setPath.insert(strValue);
+							}
+						}
+						nPos = strTemp.find(keyString);
 					}
-					else if (strValue.length()>0)
-					{
-						mapData[strValue].setPath.insert(strValue);
-					}
-					nPos = strTemp.find(keyString);
 				}
 			}
 		}
@@ -901,13 +1208,13 @@ void SkillParse::ProcessStateAndDamageInfoByIni(CIniLoad* pIni ,STATETMEMAP &map
 }
 
 
-void SkillParse::ProceeStateTme(string strSkllID,map<string, XMLNode*> &mapInfoP)
+void SkillParse::ProceeStateTme(string presentName,string strSkllID,map<string, XMLNode*> &mapInfoP)
 {
 	if (m_mapSKillIDAndname.find(strSkllID) == m_mapSKillIDAndname.end())
 	{
 		return;
 	}
-	string skillPingyin = m_mapSKillIDAndname[strSkllID];
+	string skillPingyin =presentName;
 	if (m_mapStateTme.find(skillPingyin)==m_mapStateTme.end())
 	{
 		return;
@@ -927,11 +1234,51 @@ void SkillParse::ProceeStateTme(string strSkllID,map<string, XMLNode*> &mapInfoP
 	}
 }
 
-void SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
+void SkillParse::ProcessReMainStateTme(map<string, XMLNode*> mapInfoP)
 {
+	STATETMEMAP::iterator mapIter = m_mapStateTme.begin();
+	while(mapIter != m_mapStateTme.end())
+	{
+		if (mapIter->second.usedskill.size()>0)
+		{
+			++mapIter;
+			continue;
+		}
+		string strName = mapIter->first;
+		string strName1 ;
+		GetSegmentString(strName,"","_",strName1);
+		if (strName1 != m_curHeroID)
+		{
+			++mapIter;
+			continue;
+		}
+		//加入职业通用.
+		set<string>::iterator stateIter = mapIter->second.setPath.begin();
+		while(stateIter != mapIter->second.setPath.end())
+		{
+			if (mapInfoP.find(*stateIter)==mapInfoP.end())
+			{
+				++stateIter;
+				mapIter->second.bNoExit = true;
+				continue;
+			}
+			GetSkillPresentTmePathByName("heroCommon",mapInfoP[(*stateIter)]);
+			mapIter->second.usedskill.insert("heroCommon");
+			++stateIter;
+		}
+
+		++mapIter;
+	}
+}
+
+
+
+bool SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
+{
+	bool bRes= false;
 	if (xmlNode == NULL )
 	{
-		return;
+		return bRes;
 	}
 	XMLElement *pChild = xmlNode->FirstChildElement("FrameEvent");
 	while(pChild != NULL)
@@ -945,7 +1292,21 @@ void SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
 			{
 				if (pChildTmeNode->Attribute("path"))
 				{
-					m_vecSkillTme[strSkllID].insert(pChildTmeNode->Attribute("path"));
+					bRes = true;
+					string strPath = pChildTmeNode->Attribute("path");
+					if (strSkllID=="common")
+					{
+						//通用的.
+						m_CommonTmeVec.insert(strPath);
+					}
+					else if (strSkllID == "heroCommon")
+					{
+						string iDName=m_curHeroID+"_";
+						iDName+="heroCommon";
+						m_vecSkillTme[iDName].insert(strPath);
+					}
+					else
+						m_vecSkillTme[strSkllID].insert(strPath);
 				}					
 				pChildTmeNode = pChildTmeNode->NextSiblingElement("Tme");
 			}
@@ -953,6 +1314,7 @@ void SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
 		}
 		pChild= pChild->NextSiblingElement("FrameEvent");
 	}
+	return bRes;
 }
 
 void SkillParse::outPutTmeInfo()
@@ -973,6 +1335,7 @@ void SkillParse::outPutTmeInfo()
 			pTmeNewNode = xmlDoc.NewElement(strNodename.c_str());
 			if (pTmeNewNode == NULL)
 			{
+				
 				++skillIter;
 				//deeeeeorre
 				continue;
@@ -989,7 +1352,16 @@ void SkillParse::outPutTmeInfo()
 		set<string>::iterator pathIter = skillIter->second.begin();
 		while(pathIter!=skillIter->second.end()&&pSKillNewNode)
 		{
-			XMLElement *pPathEl = xmlDoc.NewElement("path");
+			//判断文件是否存在.
+			string fileFullPath = m_strWorkDir+"\\";
+			fileFullPath+=(*pathIter).c_str();
+			if (_access(fileFullPath.c_str(), 0)==-1)
+			{
+				m_NoexistTmeVec.insert(*pathIter);
+				++pathIter;
+				continue;
+			}
+			XMLElement *pPathEl = xmlDoc.NewElement("Tme");
 			if (pPathEl == NULL)
 			{
 				++pathIter;
@@ -1047,7 +1419,14 @@ void SkillParse::outPutStateTmeInfo()
 					strNameID = m_pIniLanguage->GetValue("tps-skillconfig",strNameID.c_str());
 					strvalue+=strNameID+"|";
 				}
-				
+				if (*setIter=="common")
+				{
+					strvalue+="common|";
+				}
+				else if(*setIter=="heroCommon")
+				{
+					strvalue+="heroCommon|";
+				}
 				++setIter;
 			}
 			if (strvalue.length()>1)
@@ -1072,5 +1451,140 @@ void SkillParse::outPutStateTmeInfo()
 
 void SkillParse::outPutErrorInfo()
 {
+	XMLDocument xmlDoc;
 
+	XMLElement *pEl = xmlDoc.NewElement("ErrorInfomation");
+	XMLNode *pRootNode = xmlDoc.InsertFirstChild(pEl);
+	// 输出TME信息.
+	map<string,vector<string>>::iterator errorIter = m_mapErrorInfo.begin();
+	while(errorIter != m_mapErrorInfo.end())
+	{
+		do 
+		{
+			//新建节点 
+			XMLElement *pNewNode  = NULL;
+
+			string strNodename = "errorlist";
+			pNewNode = xmlDoc.NewElement(strNodename.c_str());
+			if (pNewNode == NULL)
+			{
+				break;
+			}
+			pRootNode->InsertEndChild(pNewNode);
+			//获取技能信息.
+			string strKey= "skillname";
+			string strNameID =  m_pIniSkill->GetValue(errorIter->first,strKey.c_str());
+
+			string strSkillName = m_pIniLanguage->GetValue("tps-skillconfig",strNameID.c_str());
+
+			pNewNode->SetAttribute("ID" ,errorIter->first.c_str());
+			pNewNode->SetAttribute("name",strSkillName.c_str());
+
+			int nErrorSize = errorIter->second.size();
+			string info = "";
+			for (int nIndex = 0; nIndex < nErrorSize;++nIndex)
+			{
+				if (errorIter->second[nIndex] == "start|")
+				{
+					info.clear();
+					continue;
+				}
+				if (errorIter->second[nIndex] == "|End")
+				{
+					//添加信息.
+					XMLElement *pNewInfoNode  = NULL;
+					pNewInfoNode = xmlDoc.NewElement("ErrorInfo");
+					if (pNewInfoNode != NULL)
+					{
+						pNewNode->InsertEndChild(pNewInfoNode);
+						pNewInfoNode->SetAttribute("COTX",info.c_str());
+					}
+					info.c_str();
+					continue;
+				}
+				info+=errorIter->second[nIndex];
+				info+="|";
+			}
+		} while (0);
+		++errorIter;
+	}
+
+	//不存在的tme文件.
+	std::set<const string>::iterator setIter = m_NoexistTmeVec.begin();
+	while(setIter != m_NoexistTmeVec.end())
+	{
+		//新建节点 
+		XMLElement *pNewNode  = NULL;
+
+		string strNodename = "errorlist";
+		pNewNode = xmlDoc.NewElement(strNodename.c_str());
+		if (pNewNode == NULL)
+		{
+			break;
+		}
+		pRootNode->InsertEndChild(pNewNode);
+
+		pNewNode->SetAttribute("name","no Tme File");
+		pNewNode->SetAttribute("path",(*setIter).c_str());
+
+		++setIter;
+	}
+
+
+	string strNewFile = m_strWorkDir;
+	strNewFile += "\\processSkillRes\\error_info.xml";
+	xmlDoc.SaveFile(strNewFile.c_str());
 }
+
+void SkillParse::outCommonPath()
+{
+	XMLDocument xmlDoc;
+
+	XMLElement *pEl = xmlDoc.NewElement("Pack");
+	XMLNode *pRootNode = xmlDoc.InsertFirstChild(pEl);
+	pEl->SetAttribute("name","common");
+	// 输出TME信息.
+
+	XMLElement *pResEl = xmlDoc.NewElement("ResourcePaths");
+	pEl->InsertFirstChild(pResEl);
+
+	std::set<const string>::iterator commonIter = m_CommonTmeVec.begin();
+	while(commonIter != m_CommonTmeVec.end())
+	{
+		XMLElement *pResChildEl = xmlDoc.NewElement("Tme");
+		pResEl->InsertFirstChild(pResChildEl);
+		//除去绝对路径.
+		string strTemp = (*commonIter);
+		string strWorkPath = m_strWorkDir+"\\";
+		ReplaceLoopString(strTemp,"\\\\","\\");
+		ReplaceLoopString(strWorkPath,"\\\\","\\");
+		strTemp=ReplayString(strTemp,strWorkPath,"");
+
+		//判断文件是否存在.
+		string fileFullPath = m_strWorkDir+"\\";
+		fileFullPath+=strTemp.c_str();
+		if (_access(fileFullPath.c_str(), 0)==-1)
+		{
+			m_NoexistTmeVec.insert(strTemp);
+			++commonIter;
+			continue;
+		}
+
+
+		pResChildEl->SetAttribute("path",strTemp.c_str());
+		++commonIter;
+	}
+	string strNewFile = m_strWorkDir;
+	strNewFile += "\\processSkillRes\\common.xml";
+	xmlDoc.SaveFile(strNewFile.c_str());
+}
+
+void SkillParse::ProcessLuaTme()
+{
+	//E:\hero\tpsgame-runpath_1.6\client1.5\data\config\innatecoreskill.lua
+	m_luaTme.clear();
+	string file = m_strWorkDir+"\\data\\config\\innatecoreskill.lua";
+	CFileLineScan fs;
+	fs.ProcessFile(file,m_luaTme);
+}
+

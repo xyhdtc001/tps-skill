@@ -29,6 +29,13 @@ public:
 
 	void outPutErrorInfo();
 
+	//查找通用TME
+	void ProceeCommonTme();
+
+	void outCommonPath();
+
+	//查找lua中的 tme.
+	void ProcessLuaTme();
 protected:
 
 	void InitConfigFile();
@@ -70,10 +77,20 @@ protected:
 	void ProcessStateAndDamageInfoByIni(CIniLoad* pIni,STATETMEMAP& mapData);
 
 	//状态光效处理添加.
-	void ProceeStateTme(string strSkllID,map<string, XMLNode*> &mapInfoP);
+	void ProceeStateTme(string presentName,string strSkllID,map<string, XMLNode*> &mapInfoP);
 
-	void GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode);
+	bool GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode);
 
+	void InsetToHeroSkillMap(string skillID,int nVo);
+
+	//处理剩下的与当前英雄有关的光效.
+	void ProcessReMainStateTme(map<string, XMLNode*>);
+
+
+	
+	//prt文件中的tme直接加入通用数据.
+	void AddTmePathInPrt(string strPath);
+	void AddTmeFile(string strPath);
 
 	//获取各个职业技能信息.
 
@@ -136,5 +153,13 @@ protected:
 
 	//处理过的光效.
 	map<string,string>m_mapProcessedTmePath;
+
+	//通用光效
+	std::set<const string> m_CommonTmeVec;
+
+	//不存在的光效.
+	std::set<const string> m_NoexistTmeVec;
+
+	set<string> m_luaTme;
 };
 
