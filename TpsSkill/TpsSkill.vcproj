@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="./ini;./ini/basecode"
+				AdditionalIncludeDirectories="./ini;./ini/basecode;./src_lua"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -297,6 +297,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\luaOprate.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src_lua\lundump.c"
 				>
 			</File>
@@ -440,6 +444,10 @@
 			</File>
 			<File
 				RelativePath=".\src_lua\lualib.h"
+				>
+			</File>
+			<File
+				RelativePath=".\luaOprate.h"
 				>
 			</File>
 			<File

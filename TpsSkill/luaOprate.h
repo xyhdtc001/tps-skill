@@ -4,11 +4,11 @@
 
 class CLuaOprate 
 {
-
+public:
 	CLuaOprate();
 	~CLuaOprate();
 
-	void runLua(string s);
+	void runLua(string s,unsigned int nID,set<string> &);
 
 };
 

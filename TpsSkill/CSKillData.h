@@ -25,6 +25,7 @@ typedef struct  _stSkillDescribleData
 	string strType;
 	string strTime;
 	INIKEY vec_key;
+	bool bCoreSkill;//使用的是雕文ID
 }SKILLDESCRIBLEDATA,*LPSKILLDESCRIBLEDATA;
 
 
@@ -53,4 +54,41 @@ typedef struct _tme_st
 typedef map<string,ST_TME>  STATETMEMAP;
 
 typedef map<string,set<string>>  VEC_SKILLTME;
+
+
+
+enum EM_HEROTYPE {
+	_em_Error = 0,
+	_em_Zhanshi = 1,
+	_em_Fashi,
+	_em_Mushi,
+	_em_Qishi,
+	_em_YingWuZhe
+};
+
+ static EM_HEROTYPE GetHeroType(string strHeroID2str)
+{
+	EM_HEROTYPE resType = _em_Error;
+	if(strHeroID2str=="11")
+	{
+		resType = _em_Zhanshi;
+	}
+	else if (strHeroID2str=="12")
+	{
+		resType = _em_Fashi;
+	}
+	else if (strHeroID2str=="13")
+	{
+		resType = _em_Mushi;
+	}
+	else if (strHeroID2str=="14")
+	{
+		resType = _em_Qishi;
+	}
+	else if (strHeroID2str=="18")
+	{
+		resType = _em_YingWuZhe;
+	}
+	return resType;
+}
 

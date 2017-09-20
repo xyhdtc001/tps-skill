@@ -3,6 +3,7 @@
 #include "IniLoad.h"
 #include <direct.h> 
 #include "FileLineScan.h"
+#include "luaOprate.h"
 
 
 
@@ -10,7 +11,7 @@ SkillParse::SkillParse():
 	m_pHeroSkill(0),m_pIniSkill(0),m_pIniSkiPresent(0),m_pIniLanguage(0),m_pStateIni(0),m_cuHeroInfo(0),
 	m_pDamage(0),m_pXmlRole(0),m_pXmlHero1101_C(0),m_pXmlHero1101_P(0),m_pXmlHero1201_C(0),m_pXmlHero1201_P(0),
 	m_pXmlHero1301_C(0),m_pXmlHero1301_P(0),m_pXmlHero1401_C(0),m_pXmlHero1401_P(0),m_pXmlHero1501_C(0),m_pXmlHero1501_P(0),
-	m_pXmlHero1801_C(0),m_pXmlHero1801_P(0),m_strWorkDir("")
+	m_pXmlHero1801_C(0),m_pXmlHero1801_P(0),m_strWorkDir(""),m_pUnitData(0)
 {
 	m_CommonTmeVec.clear();
 	m_NoexistTmeVec.clear();
@@ -18,11 +19,18 @@ SkillParse::SkillParse():
 	m_vecSkillTme.clear();
 	m_mapErrorInfo.clear();
 	m_mapSKillIDAndname.clear();
+	m_pDocComonp = NULL;
 }
 
 
 SkillParse::~SkillParse()
 {
+	if (m_pDocComonp != NULL)
+	{
+		m_pDocComonp->Clear();
+		delete m_pDocComonp;
+		m_pDocComonp  = NULL;
+	}
 }
 
 bool SkillParse::SetWorkDir(string strPath)
@@ -109,7 +117,7 @@ void SkillParse::InitConfigFile()
 		m_pDamage = NULL;
 		
 	}
-	 strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\damage.ini";
+	strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\damage.ini";
 	m_pDamage = new CIniLoad(strSkillIniFile);
 	// state.ini
 	if (m_pStateIni != NULL)
@@ -121,7 +129,17 @@ void SkillParse::InitConfigFile()
 	strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\state.ini";
 	m_pStateIni = new CIniLoad(strSkillIniFile);
 
+	//unitdata.ini
+	if (m_pUnitData != NULL)
+	{
+		delete m_pUnitData;
+		m_pUnitData = NULL;
+
+	}
+	strSkillIniFile = m_strWorkDir + "\\data\\tpconfig\\unitdata.ini";
+	m_pUnitData = new CIniLoad(strSkillIniFile);
 	//初始化
+	LoadAllCommonTmeInfo();
 	ProcessStateAndDamageInfo();
 }
 
@@ -149,6 +167,13 @@ void SkillParse::InitHeroSkillMap()
 			continue;
 		}
 
+		int nGrade = m_pHeroSkill->GetIntValue(strSecName,"grade");
+		if (nGrade==4)
+		{
+			//核心被动.
+			InsetToHeroSkillMap(strSecName,nVocation,true);
+		}
+
 		string strName = m_pHeroSkill->GetValue(strSecName,"talent");
 
 		
@@ -156,11 +181,12 @@ void SkillParse::InitHeroSkillMap()
 	}
 
 }
-void SkillParse::InsetToHeroSkillMap(string skillID,int nVocation)
+void SkillParse::InsetToHeroSkillMap(string skillID,int nVocation,bool bCoreSKill)
 {
 
 	SKILLDESCRIBLEDATA _st_skillDescrig = {0};
 	_st_skillDescrig.strID = skillID;
+	_st_skillDescrig.bCoreSkill = bCoreSKill;
 	//获取INI值
 	GetIniKeyAndValue(_st_skillDescrig.vec_key,m_pHeroSkill,skillID);
 	if (nVocation == 1 )
@@ -206,21 +232,6 @@ void SkillParse::InsetToHeroSkillMap(string skillID,int nVocation)
  */
 void SkillParse::ProceeCommonTme()
 {
-	//加载通用Prt
-	string strCommonPrt = m_strWorkDir+"\\presentations\\common\\common.prt";
-
-// 	string strCommonRidePrt = m_strWorkDir+"\\presentations\\common\\commonride.prt";
-// 	AddTmePathInPrt(strCommonRidePrt);
-	XMLDocument *pDoc_p = new XMLDocument;
-	if (pDoc_p->LoadFile(strCommonPrt.c_str()) != XML_SUCCESS)
-	{
-		return;
-	}
-	XMLNode *pNode_p = pDoc_p->FirstChild();
-	map<string, XMLNode*>mapCommonInfo;
-
-	LoopXMlForInfo(pNode_p,mapCommonInfo);
-
 	//获取state中的comon present
 	STATETMEMAP::iterator skillIter = m_mapStateTme.begin();
 	int nIndex= 0;
@@ -251,7 +262,7 @@ void SkillParse::ProceeCommonTme()
 			continue;
 		}
 
-		if (mapCommonInfo.find(strRealName) == mapCommonInfo.end())
+		if (m_mapCommonInfo.find(strRealName) == m_mapCommonInfo.end())
 		{
 			m_mapErrorInfo[strCommonID].push_back("start|");
 			m_mapErrorInfo[strCommonID].push_back("commond name No Find");
@@ -260,7 +271,7 @@ void SkillParse::ProceeCommonTme()
 			++skillIter;
 			continue;
 		}
-		XMLNode* pNode= mapCommonInfo[strRealName];
+		XMLNode* pNode= m_mapCommonInfo[strRealName];
 		bool bRes = GetSkillPresentTmePathByName("common",pNode);
 		if (bRes)
 		{
@@ -270,8 +281,19 @@ void SkillParse::ProceeCommonTme()
 	}
 
 // 	//贴花。
-// 	string strDirPath = m_strWorkDir+"\\effect\\decal\\";
-// 	AddTmeFile(strDirPath);
+	string strDirPath = m_strWorkDir+"\\effect\\decal\\";
+	AddTmeFile(strDirPath);
+
+
+	//扫描lua pvpzdjmctrl.lua E:\hero\tpsgame-runpath_1.6\client1.5\data\ui\addons\pvpzdjm\pvpzdjmctrl.lua
+	string strFilePath= m_strWorkDir+"\\data\\ui\\addons\\pvpzdjm\\pvpzdjmctrl.lua";
+	CFileLineScan lineScan;
+	lineScan.ProcessFile(strFilePath,m_CommonTmeVec);
+
+	//E:\hero\tpsgame-runpath_1.6\client1.5\data\tpconfig\effectdata.lua
+	strFilePath= m_strWorkDir+"\\data\\tpconfig\\effectdata.lua";
+	lineScan.ProcessFile(strFilePath,m_CommonTmeVec);
+
 // 	//按钮
 // 	strDirPath = m_strWorkDir+"\\effect\\ui\\";
 // 	AddTmeFile(strDirPath);
@@ -292,6 +314,30 @@ void SkillParse::AddTmeFile(string strPath)
 {
 	//扫描目录下的 tme文件.
 	_findFile("*.tme",strPath.c_str(),m_CommonTmeVec);
+}
+
+void SkillParse::LoadAllCommonTmeInfo()
+{
+	//加载通用Prt
+	string strCommonPrt = m_strWorkDir+"\\presentations\\common\\common.prt";
+
+	// 	string strCommonRidePrt = m_strWorkDir+"\\presentations\\common\\commonride.prt";
+	// 	AddTmePathInPrt(strCommonRidePrt);
+	if (m_pDocComonp != NULL)
+	{
+		m_pDocComonp->Clear();
+		delete m_pDocComonp;
+		m_pDocComonp = NULL;
+	}
+	XMLDocument *m_pDocComonp = new XMLDocument;
+	if (m_pDocComonp->LoadFile(strCommonPrt.c_str()) != XML_SUCCESS)
+	{
+		m_pDocComonp->Clear();
+		m_pDocComonp = NULL;
+		return;
+	}
+	XMLNode *pNode_p = m_pDocComonp->FirstChild();
+	LoopXMlForInfo(pNode_p,m_mapCommonInfo);
 }
 
 void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroID)
@@ -343,6 +389,32 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroI
 	while (mapIter!=mapInfo.end())
 	{
 		SKILLDESCRIBLEDATA& _skillInfo = mapIter->second;
+
+		if (_skillInfo.bCoreSkill == true)
+		{
+			//核心被动处理.
+			CLuaOprate op;
+			string strPath = ";"; 
+			strPath+= m_strWorkDir;
+			strPath+="/data/config/?.lua";
+			ReplaceLoopString(strPath,"\\","/");
+			unsigned int nID = _ttoi(_skillInfo.strID.c_str());
+			op.runLua(strPath,nID,m_vecSkillTme[_skillInfo.strID]);
+			string strName = m_pHeroSkill->GetValue(_skillInfo.strID,"talent");
+			if (strName.length() > 0 )
+			{
+				set<string>::iterator iterCoreTme = m_vecSkillTme[_skillInfo.strID].begin();
+				while(iterCoreTme != m_vecSkillTme[_skillInfo.strID].end())
+				{
+					//获取talent
+					m_vecSkillTme[strName].insert(*iterCoreTme);
+					++iterCoreTme;
+				}
+			}
+
+			++mapIter;
+			continue;;
+		}
 
 		//技能名字.
 		string strSkillName;
@@ -479,12 +551,25 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroI
 	//处理state中名字不规范的字段.
 	ProcessReMainStateTme(mapPInfo);
 
+	//处理unitdata中的职业相关.
+	ProcessUnitDataSkillPresent(mapPInfo);
+
 	//保存
 	string strNewFile = m_strWorkDir;
 	strNewFile += "\\processSkillRes\\hero_";
 	strNewFile += strHeroID;
 	strNewFile += ".xml";
 	pDoc->SaveFile(strNewFile.c_str());
+
+	pDoc_c->Clear();
+	delete pDoc_c;
+	pDoc_c = NULL;
+	pDoc_p->Clear();
+	delete pDoc_p;
+	pDoc_p= NULL;
+	pDoc->Clear();
+	delete pDoc_p;
+	pDoc_p=NULL;
 
 }
 
@@ -1234,7 +1319,7 @@ void SkillParse::ProceeStateTme(string presentName,string strSkllID,map<string, 
 	}
 }
 
-void SkillParse::ProcessReMainStateTme(map<string, XMLNode*> mapInfoP)
+void SkillParse::ProcessReMainStateTme(map<string, XMLNode*>& mapInfoP)
 {
 	STATETMEMAP::iterator mapIter = m_mapStateTme.begin();
 	while(mapIter != m_mapStateTme.end())
@@ -1272,6 +1357,47 @@ void SkillParse::ProcessReMainStateTme(map<string, XMLNode*> mapInfoP)
 }
 
 
+
+void SkillParse::ProcessUnitDataSkillPresent(map<string, XMLNode*>&pHeroCommonP)
+{
+	if (m_pUnitData == NULL)
+	{
+		return;
+	}
+	int nSectionNum = m_pUnitData->GetSectionNum();
+	int nSectionIndex = 0;
+	while(nSectionIndex < nSectionNum)
+	{
+		string  strName = m_pUnitData->GetSectionName(nSectionIndex);
+		//字段长度为5 根据前面2个字段确定职业。
+		if (strName.length() == 5)
+		{
+			string strHeroType = strName.substr(0,2);
+			EM_HEROTYPE emType = GetHeroType(strHeroType);
+			EM_HEROTYPE emCurType = GetHeroType(m_curHeroID.substr(0,2));
+			if (emType ==  emCurType)
+			{
+				string strPresent = m_pUnitData->GetValue(strName,"presentation");
+				if (strPresent.length() > 0)
+				{
+					//获取光效.
+					if (pHeroCommonP.find(strPresent)!=pHeroCommonP.end())
+					{
+						GetSkillPresentTmePathByName("heroCommon",pHeroCommonP[strPresent]);
+					}
+					else if (m_mapCommonInfo.find(strPresent)!=m_mapCommonInfo.end())
+					{
+						GetSkillPresentTmePathByName("heroCommon",m_mapCommonInfo[strPresent]);
+					}
+				}
+			}
+		}
+		nSectionIndex++;
+	}
+
+
+
+}
 
 bool SkillParse::GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode)
 {
@@ -1331,7 +1457,9 @@ void SkillParse::outPutTmeInfo()
 		XMLNode *pSKillNewNode= NULL;
 		if (skillIter->second.size()>0)
 		{
-			string strNodename = "tme_"+skillIter->first;
+			string strName = skillIter->first;
+			strName = ReplayString(strName,"_heroCommon","");
+			string strNodename = "tme_"+strName;
 			pTmeNewNode = xmlDoc.NewElement(strNodename.c_str());
 			if (pTmeNewNode == NULL)
 			{
@@ -1551,8 +1679,7 @@ void SkillParse::outCommonPath()
 	std::set<const string>::iterator commonIter = m_CommonTmeVec.begin();
 	while(commonIter != m_CommonTmeVec.end())
 	{
-		XMLElement *pResChildEl = xmlDoc.NewElement("Tme");
-		pResEl->InsertFirstChild(pResChildEl);
+		
 		//除去绝对路径.
 		string strTemp = (*commonIter);
 		string strWorkPath = m_strWorkDir+"\\";
@@ -1569,7 +1696,8 @@ void SkillParse::outCommonPath()
 			++commonIter;
 			continue;
 		}
-
+		XMLElement *pResChildEl = xmlDoc.NewElement("Tme");
+		pResEl->InsertFirstChild(pResChildEl);
 
 		pResChildEl->SetAttribute("path",strTemp.c_str());
 		++commonIter;
@@ -1581,10 +1709,5 @@ void SkillParse::outCommonPath()
 
 void SkillParse::ProcessLuaTme()
 {
-	//E:\hero\tpsgame-runpath_1.6\client1.5\data\config\innatecoreskill.lua
-	m_luaTme.clear();
-	string file = m_strWorkDir+"\\data\\config\\innatecoreskill.lua";
-	CFileLineScan fs;
-	fs.ProcessFile(file,m_luaTme);
 }
 

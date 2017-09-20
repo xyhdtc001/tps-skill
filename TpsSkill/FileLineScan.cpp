@@ -12,16 +12,22 @@ CFileLineScan::~CFileLineScan()
 
 }
 
-void CFileLineScan::ProcessFile(string filePath , set<string>&resSet)
+void CFileLineScan::ProcessFile(string filePath , set<const string>&resSet)
 {
 	ifstream in(filePath.c_str());  
 	string filename;  
 	string line;  
 	int nType = 0;
+	int nLineIndex = 0;
 	if(in) // 有该文件  
 	{  
 		while (getline (in, line)) // line中不包括每行的换行符  
 		{   
+			nLineIndex++;
+			if (nLineIndex==4336)
+			{
+				int iiii =0;
+			}
 			if (line.size() == 0 )
 			{
 				continue;
@@ -32,7 +38,7 @@ void CFileLineScan::ProcessFile(string filePath , set<string>&resSet)
 	}  
 }
 
-int CFileLineScan::ProcessLine(int nType ,string strLine ,set<string>&resSet)
+int CFileLineScan::ProcessLine(int nType ,string strLine ,set<const string>&resSet)
 {
 	int nRes = nType;
 	if (nType == 0)
@@ -43,6 +49,9 @@ int CFileLineScan::ProcessLine(int nType ,string strLine ,set<string>&resSet)
 		{
 			//进入范围注释区域.
 			nRes = 1;
+			strLine =  strLine.substr(nPos+4,strLine.length()-nPos-4);
+			nRes = ProcessLine(0,strLine,resSet);
+			return nRes;
 		}
 		else
 			nPos = strLine.length();
@@ -78,7 +87,7 @@ int CFileLineScan::ProcessLine(int nType ,string strLine ,set<string>&resSet)
 	return nRes;
 }
 
-void CFileLineScan::ProcessEffectString(string strOrg ,set<string>&resSet)
+void CFileLineScan::ProcessEffectString(string strOrg ,set<const string>&resSet)
 {
 	int nPos = strOrg.find(".tme\"");
 	if (nPos != string::npos)
@@ -98,7 +107,12 @@ void CFileLineScan::ProcessEffectString(string strOrg ,set<string>&resSet)
 		if (bFind)
 		{
 			string strTemp = strOrg.substr(nPos2+1,nPos-nPos2+3);//不要引号.
-			resSet.insert(strTemp);
+			ReplaceLoopString(strTemp,"\\","/");
+			if (strTemp.length()>0)
+			{
+				resSet.insert(strTemp);
+			}
+			
 		}
 
 

@@ -81,16 +81,23 @@ protected:
 
 	bool GetSkillPresentTmePathByName(string strSkllID,XMLNode* xmlNode);
 
-	void InsetToHeroSkillMap(string skillID,int nVo);
+	void InsetToHeroSkillMap(string skillID,int nVo,bool bCoreSKill=false);
 
 	//处理剩下的与当前英雄有关的光效.
-	void ProcessReMainStateTme(map<string, XMLNode*>);
+	void ProcessReMainStateTme(map<string, XMLNode*>&);
+
+	//处理unitdata中的技能相关.
+	void ProcessUnitDataSkillPresent(map<string, XMLNode*>&);
 
 
 	
 	//prt文件中的tme直接加入通用数据.
 	void AddTmePathInPrt(string strPath);
 	void AddTmeFile(string strPath);
+
+
+	//加载所有通用光效.
+	void LoadAllCommonTmeInfo();
 
 	//获取各个职业技能信息.
 
@@ -101,6 +108,8 @@ protected:
 	CIniLoad *m_pIniLanguage;//描述语言.
 	CIniLoad *m_pDamage; //伤害表现.
 	CIniLoad *m_pStateIni; //state.ini
+
+	CIniLoad *m_pUnitData;
 
 	XMLDocument *m_pXmlRole;
 
@@ -145,6 +154,11 @@ protected:
 	STATETMEMAP m_mapStateTme;//状态光效.
 	map<string,string>m_mapSKillIDAndname;
 
+
+	//所有通用光效map
+	map<string, XMLNode*>m_mapCommonInfo;
+	XMLDocument *m_pDocComonp;
+
 	//格式不规范信息.
 	map<string,vector<string>> m_mapErrorInfo;
 
@@ -160,6 +174,6 @@ protected:
 	//不存在的光效.
 	std::set<const string> m_NoexistTmeVec;
 
-	set<string> m_luaTme;
+	set<const string> m_luaTme;
 };
 

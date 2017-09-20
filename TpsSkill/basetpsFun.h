@@ -204,7 +204,12 @@ static void _findFile(string strKey,const char* mainDir,std::set<const std::stri
 				strcat_s(filename, "\\");  
 				strcat_s(filename, fileinfo.name);  
 				string temfilename = filename;  
-				files.insert(temfilename);  
+				ReplaceLoopString(temfilename,"\\","/");
+				if (temfilename.length()>0)
+				{
+					files.insert(temfilename);
+				}
+				  
 			}  
 		} while (_findnext(hFile, &fileinfo) == 0);  
 		_findclose(hFile);  
@@ -245,8 +250,7 @@ static string ReplayString(string org,string oldsub,string newsub)
 	{
 		return strDes;
 	}
-
-	strDes.replace(nPos,nPos+oldsub.length(),newsub.c_str());
+	strDes.replace(nPos,oldsub.length(),newsub.c_str());
 	return strDes;
 }
 

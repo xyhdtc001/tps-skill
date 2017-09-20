@@ -6,9 +6,10 @@
 
 
 
+
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-
 	SkillParse sk;
 	sk.SetWorkDir(argv[1]);
  	sk.ParseHero("1101");
