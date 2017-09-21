@@ -28,6 +28,9 @@ public:
 
 	//获取该INI文件所有的key .(需要遍历一下才会获取到完整数据。)
 	const set<string> GetSetKey() {return m_setIniKey;};
+
+	//
+	bool IsSectionName(string strSection);
 protected:
 	CIni  *   ini;
 	int m_nSectionNum;

@@ -2,6 +2,7 @@
 #ifndef _LUAOPRATE___
 #define _LUAOPRATE___
 
+
 class CLuaOprate 
 {
 public:

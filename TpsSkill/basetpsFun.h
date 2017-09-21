@@ -253,6 +253,19 @@ static string ReplayString(string org,string oldsub,string newsub)
 	strDes.replace(nPos,oldsub.length(),newsub.c_str());
 	return strDes;
 }
-
+//获取当前目录.
+static string GetDir(string strPath)
+{
+	int dwSize =  strPath.length();
+	while(dwSize > 0 )
+	{
+		if (strPath.at(dwSize-1)=='\\'||strPath.at(dwSize-1)=='/')
+		{
+			break;
+		}
+		dwSize--;
+	}
+	return strPath.substr(0,dwSize);
+}
 
 #endif

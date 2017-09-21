@@ -92,3 +92,5 @@ enum EM_HEROTYPE {
 	return resType;
 }
 
+
+

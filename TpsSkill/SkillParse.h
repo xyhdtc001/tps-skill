@@ -19,6 +19,7 @@ public:
 	
 	bool SetWorkDir(string strPath);
 
+	bool SetSelfWorkDir(string strPath);
 	
 	void ParseHero(string strHeroID);
 
@@ -56,7 +57,7 @@ protected:
 
 	//遍历setName获取技能实际表现.
 
-	void GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, map<string, XMLNode*> &mapInfoP,XMLNode* pDesNode,const string &strSkillID);
+	void GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, map<string, XMLNode*> &mapInfoP,XMLNode* pDesNode,const string &strSkillID, map<string, XMLNode*> &mapInfoPSelf, map<string, XMLNode*> &mapInfoPLink);
 	
 	string m_strWorkDir; 
 
@@ -84,10 +85,10 @@ protected:
 	void InsetToHeroSkillMap(string skillID,int nVo,bool bCoreSKill=false);
 
 	//处理剩下的与当前英雄有关的光效.
-	void ProcessReMainStateTme(map<string, XMLNode*>&);
+	void ProcessReMainStateTme(map<string, XMLNode*>& ,map<string, XMLNode*>*p=NULL);
 
 	//处理unitdata中的技能相关.
-	void ProcessUnitDataSkillPresent(map<string, XMLNode*>&);
+	void ProcessUnitDataSkillPresent(map<string, XMLNode*>&,map<string, XMLNode*>*p=NULL);
 
 
 	
@@ -99,6 +100,9 @@ protected:
 	//加载所有通用光效.
 	void LoadAllCommonTmeInfo();
 
+	//根据皮肤ID获取英雄类型.
+	int  GetHeroTypeByIni(string strRoleID);
+
 	//获取各个职业技能信息.
 
 	//配置文件
@@ -108,6 +112,8 @@ protected:
 	CIniLoad *m_pIniLanguage;//描述语言.
 	CIniLoad *m_pDamage; //伤害表现.
 	CIniLoad *m_pStateIni; //state.ini
+
+	CIniLoad *m_pRoleInfoIni; //state.ini
 
 	CIniLoad *m_pUnitData;
 
@@ -146,13 +152,15 @@ protected:
 
 	MAPSKILLINFO* m_cuHeroInfo;
 
+
 	//buf..
 
-	//所有技能表现表.
-	string m_curHeroID;
+	string m_curHeroID;  //英雄roleID
+	string m_curRoleLinkID; //英雄linkID
+	string m_curProceeHeroID;//当前正在处理的英雄ID。m_curHeroID m_curRoleLinkID 2 选1 。
 
 	STATETMEMAP m_mapStateTme;//状态光效.
-	map<string,string>m_mapSKillIDAndname;
+	map<string,string>m_mapSKillIDAndname;//damage.ini表现信息.
 
 
 	//所有通用光效map
@@ -175,5 +183,8 @@ protected:
 	std::set<const string> m_NoexistTmeVec;
 
 	set<const string> m_luaTme;
+
+	//exe 运行路径.
+	string m_curSelfRunPath;
 };
 

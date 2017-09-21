@@ -84,3 +84,21 @@ std::string CIniLoad::GetKeyByIndex(string strSection, int dwKeyIndex)
 	}
 	return nRes;
 }
+
+bool CIniLoad::IsSectionName(string strSection)
+{
+	if (ini == NULL)
+	{
+		return false;
+	}
+	int nNum = ini->GetSectionAmount();
+	for (int nIndex = 0;nIndex < nNum;++nIndex)
+	{
+		if (ini->GetSectionByIndex(nIndex)==strSection)
+		{
+			return true;
+			break;
+		}
+	}
+	return false;
+}

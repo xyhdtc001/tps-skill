@@ -173,6 +173,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\CXmlOprate.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\FileLineScan.cpp"
 				>
 			</File>
@@ -321,6 +325,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SkillParsePlus.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 			</File>
@@ -344,6 +352,10 @@
 			</File>
 			<File
 				RelativePath=".\CSKillData.h"
+				>
+			</File>
+			<File
+				RelativePath=".\CXmlOprate.h"
 				>
 			</File>
 			<File
@@ -464,6 +476,10 @@
 			</File>
 			<File
 				RelativePath=".\SkillParse.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SkillParsePlus.h"
 				>
 			</File>
 			<File
