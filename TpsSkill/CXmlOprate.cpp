@@ -40,11 +40,6 @@ bool CXmlOprate::InitXmlFile(string strFile)
 
 bool CXmlOprate::CreateXmlDoc()
 {
-	return true;
-}
-
-bool CXmlOprate::SaveFile(string strFilePath)
-{
 	if (m_pDoc != NULL)
 	{
 		m_pDoc->Clear();
@@ -52,6 +47,16 @@ bool CXmlOprate::SaveFile(string strFilePath)
 		m_pDoc= NULL;
 	}
 	m_pDoc = new XMLDocument;
+	return true;
+}
+
+bool CXmlOprate::SaveFile(string strFilePath)
+{
+	if (m_pDoc==NULL)
+	{
+		return false;
+	}
+	m_pDoc->SaveFile(strFilePath.c_str());
 	return true;
 }
 
@@ -66,4 +71,13 @@ tinyxml2::XMLNode* CXmlOprate::GetNodePtr(string strNodeName/*=""*/)
 		return m_pDoc->RootElement();
 	}
 	return m_pDoc->RootElement()->FirstChildElement(strNodeName.c_str());
+}
+
+tinyxml2::XMLElement * CXmlOprate::CreateEle(string strname)
+{
+	if (m_pDoc == NULL)
+	{
+		return NULL;
+	}
+	return m_pDoc->NewElement(strname.c_str());
 }

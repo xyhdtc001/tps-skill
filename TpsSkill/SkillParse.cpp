@@ -58,7 +58,7 @@ void SkillParse::ParseHero(string strHeroID)
 	int nVoa = GetHeroTypeByIni(strHeroID);
 	if (nVoa == 0)
 	{
-		nVoa = GetHeroTypeByIni(m_pUnitData->GetValue(strHeroID,"linkroleid"));
+		nVoa = GetHeroTypeByIni(m_pUnitData->GetValue(strHeroID,"linkroleid"));//useskas 动作相关.,linkroleid 皮肤相关，主程序处理会将linkid转为role id.
 	}
 
 	if (nVoa == 1)
@@ -1476,6 +1476,9 @@ void SkillParse::ProcessReMainStateTme(map<string, XMLNode*>& mapInfoP,map<strin
 
 void SkillParse::ProcessUnitDataSkillPresent(map<string, XMLNode*>&pHeroCommonP,map<string, XMLNode*>*pLinkMap)
 {
+	/************************************************************************/
+	/* 根据字段特殊处理.如有修改配置规则需要作出修改.                                                                     */
+	/************************************************************************/
 	if (m_pUnitData == NULL)
 	{
 		return;
@@ -1510,6 +1513,34 @@ void SkillParse::ProcessUnitDataSkillPresent(map<string, XMLNode*>&pHeroCommonP,
 					{
 						GetSkillPresentTmePathByName("heroCommon",m_mapCommonInfo[strPresent]);
 					}
+				}
+			}
+		}
+
+		// role id link id = 英雄ID。加入通用.
+// 		string strRoleId = m_pUnitData->GetValue(strName,"roleid");
+// 		string useSkaID =  m_pUnitData->GetValue(strName,"useskas");
+		else if (strName ==  m_curHeroID || strName == m_curRoleLinkID)
+		{
+			string strPresent = m_pUnitData->GetValue(strName,"presentation");
+			while(strPresent.length() > 0 )
+			{
+				string strRealPresenName ;
+				strPresent = GetSegmentString(strPresent,"",",",strRealPresenName);
+
+				//获取光效.
+				if (pHeroCommonP.find(strRealPresenName)!=pHeroCommonP.end())
+				{
+					GetSkillPresentTmePathByName("heroCommon",pHeroCommonP[strRealPresenName]);
+				}
+				else if (pLinkMap&&pLinkMap->find(strRealPresenName)!=pLinkMap->end())
+				{
+					map<string, XMLNode*>& mapTemp = *pLinkMap;
+					GetSkillPresentTmePathByName("heroCommon",mapTemp[strRealPresenName]);
+				}
+				else if (m_mapCommonInfo.find(strRealPresenName)!=m_mapCommonInfo.end())
+				{
+					GetSkillPresentTmePathByName("heroCommon",m_mapCommonInfo[strRealPresenName]);
 				}
 			}
 		}

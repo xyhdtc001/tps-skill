@@ -12,6 +12,7 @@ class tinyxml2::XMLElement;
 
 class SkillParse
 {
+		friend class CUinitPresentParse;
 public:
 	SkillParse();
 	~SkillParse();

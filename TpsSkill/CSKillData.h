@@ -90,7 +90,14 @@ enum EM_HEROTYPE {
 		resType = _em_YingWuZhe;
 	}
 	return resType;
-}
+}	
 
+ typedef struct _st_roleInfo
+ {
+	 string strSkinPath;
+	 string strSkePath;
+	 string strSkasPath;
+	 set<string> setWWisePath ;
+ }ST_ROLEINFO;
 
 

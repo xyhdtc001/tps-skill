@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "SkillParse.h"
-
+#include "UnitPresentParse.h"
 
 
 
@@ -53,6 +53,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	sk.outPutStateTmeInfo();
 	sk.outCommonPath();
 	sk.outPutErrorInfo();
+
+	//role 需要加载的光效修改.
+	CUinitPresentParse unitPresen(&sk);
+	unitPresen.InitXmlInfo();
+	unitPresen.ProcessUnitData();
+
+
 	return 0;
 }
 

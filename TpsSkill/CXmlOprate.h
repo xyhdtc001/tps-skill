@@ -25,6 +25,8 @@ public:
 
 	XMLNode* GetNodePtr(string strNodeName="");
 
+
+	XMLElement * CreateEle(string strname);
 protected:
 	XMLDocument * m_pDoc ;
 

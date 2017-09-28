@@ -340,6 +340,10 @@
 				RelativePath=".\TpsSkill.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\UnitPresentParse.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Í·ÎÄ¼þ"
@@ -492,6 +496,10 @@
 			</File>
 			<File
 				RelativePath=".\tinyxml2.h"
+				>
+			</File>
+			<File
+				RelativePath=".\UnitPresentParse.h"
 				>
 			</File>
 		</Filter>

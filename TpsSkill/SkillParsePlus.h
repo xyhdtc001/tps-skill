@@ -4,7 +4,8 @@
 
 class SkillParsePlus 
 {
-
+	SkillParsePlus();
+	~SkillParsePlus();
 };
 
 
