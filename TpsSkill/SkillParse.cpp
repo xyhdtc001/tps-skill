@@ -81,6 +81,10 @@ void SkillParse::ParseHero(string strHeroID)
 	{
 		CreateHeroSkillInfoByXml(m_Hero1801, strHeroID);
 	}
+	else if (nVoa == 9)
+	{
+		CreateHeroSkillInfoByXml(m_Hero1901, strHeroID);
+	}
 	
 }
 
@@ -183,7 +187,7 @@ void SkillParse::InitHeroSkillMap()
 
 		//区别职业
 		int nVocation = m_pHeroSkill->GetIntValue(strSecName,"vocation");
-		if (nVocation <=0 || nVocation >8)
+		if (nVocation <=0 || nVocation >9)
 		{
 			continue;
 		}
@@ -234,6 +238,11 @@ void SkillParse::InsetToHeroSkillMap(string skillID,int nVocation,bool bCoreSKil
 	{
 		//影舞者
 		m_Hero1801.insert(make_pair(skillID, _st_skillDescrig));
+	}
+	else if (nVocation == 9)
+	{
+		//影舞者
+		m_Hero1901.insert(make_pair(skillID, _st_skillDescrig));
 	}
 	//nextskill_1 nextskill_2
 	string strValue =  m_pIniSkill->GetValue(skillID,"nextskill_1");
@@ -324,6 +333,8 @@ void SkillParse::ProceeCommonTme()
 // 	//按钮
 // 	strDirPath = m_strWorkDir+"\\effect\\ui\\";
 // 	AddTmeFile(strDirPath);
+	string strCommonRidePrt = m_strWorkDir+"\\presentations\\common\\commonride.prt";
+	AddTmePathInPrt(strCommonRidePrt);
 }
 
 /*
@@ -659,7 +670,7 @@ void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroI
 	//处理state中名字不规范的字段.
 	ProcessReMainStateTme(mapPInfo,&mapPInfo_Link);
 
-	//处理unitdata中的职业相关.
+	//处理unitdata中的职业相关.()
 	ProcessUnitDataSkillPresent(mapPInfo,&mapPInfo_Link);
 
 	//保存
@@ -1520,7 +1531,7 @@ void SkillParse::ProcessUnitDataSkillPresent(map<string, XMLNode*>&pHeroCommonP,
 		// role id link id = 英雄ID。加入通用.
 // 		string strRoleId = m_pUnitData->GetValue(strName,"roleid");
 // 		string useSkaID =  m_pUnitData->GetValue(strName,"useskas");
-		else if (strName ==  m_curHeroID || strName == m_curRoleLinkID)
+		else if (/*strName ==  m_curHeroID || strName == m_curRoleLinkID*/0) //  暂不处理.
 		{
 			string strPresent = m_pUnitData->GetValue(strName,"presentation");
 			while(strPresent.length() > 0 )

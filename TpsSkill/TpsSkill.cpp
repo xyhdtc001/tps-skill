@@ -45,6 +45,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	sk.ParseHero("1803");
 	sk.ParseHero("1804");
 
+	sk.ParseHero("1900");
+	sk.ParseHero("1901");
+	sk.ParseHero("1902");
+	sk.ParseHero("1903");
+	sk.ParseHero("1904");
+
 	sk.ProceeCommonTme();
 
 	sk.ProcessLuaTme();

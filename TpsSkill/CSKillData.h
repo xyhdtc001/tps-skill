@@ -63,7 +63,8 @@ enum EM_HEROTYPE {
 	_em_Fashi,
 	_em_Mushi,
 	_em_Qishi,
-	_em_YingWuZhe
+	_em_YingWuZhe,
+	_em_Youxia
 };
 
  static EM_HEROTYPE GetHeroType(string strHeroID2str)
@@ -86,6 +87,10 @@ enum EM_HEROTYPE {
 		resType = _em_Qishi;
 	}
 	else if (strHeroID2str=="18")
+	{
+		resType = _em_YingWuZhe;
+	}
+	else if (strHeroID2str=="19")
 	{
 		resType = _em_YingWuZhe;
 	}
