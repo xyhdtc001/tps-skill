@@ -80,6 +80,65 @@ static string GetSegmentString(const string& strOrigin,const  string &param1,con
 	return strRes;
 }
 
+static string GetSegmentStringEx(const string& strOrigin,const  string &param1,const  string &param2,string &strDes,bool bAllExit)
+{
+	strDes="";
+	if (strOrigin.length() <= 0)
+	{
+		return "";
+	}
+	int nParam1Pos = 0;
+	if (param1.length()>0)
+	{
+		nParam1Pos = strOrigin.find(param1.c_str());
+		if (nParam1Pos==string::npos)
+		{
+			//Ã»ÕÒµ½
+			nParam1Pos = 0;
+			if (bAllExit)
+			{
+				return strOrigin;
+			}
+		}
+		else
+		{
+			//nParam1Pos = nParam1Pos==string::npos?0:nParam1Pos;
+			nParam1Pos =nParam1Pos+param1.length();
+		}
+
+	}
+	int nParam2Pos = strOrigin.length();
+	if(param2.length() > 0)
+	{
+		nParam2Pos = strOrigin.find(param2,nParam1Pos);
+		if (nParam2Pos==string::npos)
+		{
+			nParam2Pos = strOrigin.length();
+			if (bAllExit)
+			{
+				return strOrigin;
+			}
+		}
+		else
+		{
+			nParam2Pos = nParam2Pos>=nParam1Pos?nParam2Pos:strOrigin.length();
+		}
+		
+	}
+
+	if (nParam2Pos-nParam1Pos > 0)
+	{
+		strDes = strOrigin.substr(nParam1Pos,nParam2Pos-nParam1Pos);
+	}
+	string strRes = "";
+	if (strOrigin.length() > (nParam2Pos+param2.length()) )
+	{
+		strRes = strOrigin.substr(nParam2Pos+param2.length(),strOrigin.length() - (nParam2Pos+param2.length()));
+	}
+
+	return strRes;
+}
+
 
 static int Tolower(int c)  
 {  

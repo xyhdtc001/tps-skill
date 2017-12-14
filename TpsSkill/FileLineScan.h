@@ -7,6 +7,7 @@
 
 using namespace std;
 
+class CIniLoad;
 class CFileLineScan
 {
 public:
@@ -14,6 +15,9 @@ public:
 	~CFileLineScan();
 
 	void ProcessFile(string filePath , set<const string>&resSet);
+
+
+	void ProcessFile(string filePath ,CIniLoad*pInit,CIniLoad *pLang);
 
 
 protected:

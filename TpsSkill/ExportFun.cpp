@@ -1,47 +1,23 @@
-// TpsSkill.cpp : 定义控制台应用程序的入口点。
-//
-
 #include "stdafx.h"
+
+#define DLLEXPORT_API extern "C" _declspec(dllexport)
 #include "SkillParse.h"
 #include "UnitPresentParse.h"
-#include "FileLineScan.h"
-#include "CCopyOprate.h"
 
-#include <iostream>
-
-//usdtgapresent 添加字段解析.
-
-
-
-int _tmain(int argc, _TCHAR* argv[])
+DLLEXPORT_API void TPSSkillTmePreloadScen(char* szWorkDir)
 {
 	SkillParse sk;
-	sk.SetSelfWorkDir(argv[0]);
-	sk.SetWorkDir(argv[1]);
-	std::cout<<"param1:" << argv[1] <<std::endl;
+	//sk.SetSelfWorkDir(argv[0]);
+	sk.SetWorkDir(szWorkDir);
 
-	if (argc > 2 )
-	{
-		std::cout<<"param2:" << argv[2] <<std::endl;
-		//拷贝文件到目录.
-		CopyDir cp;
-		string strDesPath = argv[1];
-		string strSrcPath = argv[2];
-		strSrcPath+="\\";
-		strDesPath+="\\data\\tpconfig\\preloadroleres\\";
-		cp.copy(strSrcPath,strDesPath);
-	}
-
-
-	
- 	sk.ParseHero("1100");
+	sk.ParseHero("1100");
 	sk.ParseHero("1101");
 	sk.ParseHero("1102");
 	sk.ParseHero("1103");
 	sk.ParseHero("1104");
 	sk.ParseHero("1105");
 
- 	sk.ParseHero("1201");
+	sk.ParseHero("1201");
 	sk.ParseHero("1202");
 	sk.ParseHero("1203");
 	sk.ParseHero("1204");
@@ -84,7 +60,4 @@ int _tmain(int argc, _TCHAR* argv[])
 	CUinitPresentParse unitPresen(&sk);
 	unitPresen.InitXmlInfo();
 	unitPresen.ProcessUnitData();
-
-	return 0;
 }
-

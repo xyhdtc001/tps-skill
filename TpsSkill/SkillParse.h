@@ -187,6 +187,6 @@ protected:
 	set<const string> m_luaTme;
 
 	//exe ÔËÐÐÂ·¾¶.
-	string m_curSelfRunPath;
+	//string m_curSelfRunPath;
 };
 

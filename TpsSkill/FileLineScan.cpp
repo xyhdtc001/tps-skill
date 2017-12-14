@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "FileLineScan.h"
+#include "IniLoad.h"
 #include <fstream>
+#include <set>
 
 CFileLineScan::CFileLineScan()
 {
@@ -36,6 +38,56 @@ void CFileLineScan::ProcessFile(string filePath , set<const string>&resSet)
 			nType = ProcessLine(nType,line,resSet);
 		}  
 	}  
+	in.close();
+}
+
+void CFileLineScan::ProcessFile(string filePath ,CIniLoad*pInit,CIniLoad *pLang)
+{
+	ifstream in(filePath.c_str());  
+	string filename;  
+	string line;  
+	int nType = 0;
+	int nLineIndex = 0;
+	std::set<string> setTemp;
+	setTemp.clear();
+
+	string str2 = "e:\\22.txt";
+	ofstream o_file(str2.c_str()); //输出文件流，将数据输出到文件   
+	if(!in || !o_file)
+	{
+		return;
+	}
+	if(in) // 有该文件  
+	{  
+		while (getline (in, line)) // line中不包括每行的换行符  
+		{   
+			nLineIndex++;
+			if (line.size() == 0 )
+			{
+				continue;
+			}
+			string strDes;
+			string strLine2 = GetSegmentStringEx(line,"skillID(",")",strDes,true);
+			if (strDes.length() <= 0)
+			{
+				continue;
+			}
+			string strDes2;
+			GetSegmentStringEx(strLine2," "," ",strDes2,true);
+			string str3 = strDes+strDes2;
+			if(setTemp.find(str3) != setTemp.end())
+				continue;
+			setTemp.insert(str3);
+			//
+			string strKey= "skillname";
+			string strNameID =  pInit->GetValue(strDes,strKey.c_str());
+
+			string strSkillName = pLang->GetValue("tps-skillconfig",strNameID.c_str());
+			o_file<<line.c_str()<<" name:"<<strSkillName.c_str()<<endl;
+		}  
+	}
+	in.close();
+	o_file.close();
 }
 
 int CFileLineScan::ProcessLine(int nType ,string strLine ,set<const string>&resSet)

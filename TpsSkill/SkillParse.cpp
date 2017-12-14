@@ -5,6 +5,7 @@
 #include "FileLineScan.h"
 #include "luaOprate.h"
 #include "CXmlOprate.h"
+#include "CCopyOprate.h"
 
 
 
@@ -21,7 +22,7 @@ SkillParse::SkillParse():
 	m_mapErrorInfo.clear();
 	m_mapSKillIDAndname.clear();
 	m_pDocComonp = NULL;
-	m_curSelfRunPath.clear();
+	//m_curSelfRunPath.clear();
 }
 
 
@@ -49,7 +50,7 @@ bool SkillParse::SetWorkDir(string strPath)
 
 bool SkillParse::SetSelfWorkDir(string strPath)
 {
-	m_curSelfRunPath = GetDir(strPath);
+	//m_curSelfRunPath = GetDir(strPath);
 	return true;
 }
 
@@ -154,14 +155,14 @@ void SkillParse::InitConfigFile()
 	m_pUnitData = new CIniLoad(strSkillIniFile);
 
 	//本地ROLEID ini
-	if (m_pRoleInfoIni != NULL)
-	{
-		delete m_pRoleInfoIni;
-		m_pRoleInfoIni = NULL;
-	}
-	
-	strSkillIniFile = m_curSelfRunPath+"tpsSkill.ini";
-	m_pRoleInfoIni = new CIniLoad(strSkillIniFile);
+// 	if (m_pRoleInfoIni != NULL)
+// 	{
+// 		delete m_pRoleInfoIni;
+// 		m_pRoleInfoIni = NULL;
+// 	}
+// 	
+// 	strSkillIniFile = m_curSelfRunPath+"tpsSkill.ini";
+// 	m_pRoleInfoIni = new CIniLoad(strSkillIniFile);
 
 	//初始化
 	LoadAllCommonTmeInfo();
@@ -406,7 +407,37 @@ void SkillParse::LoadAllCommonTmeInfo()
 
 int SkillParse::GetHeroTypeByIni(string strRoleID)
 {
-	return m_pRoleInfoIni->GetIntValue(strRoleID,"vocation");
+	//先写死在代码里.
+	if (strRoleID=="1101")
+	{
+		return 1;
+	}
+	else if (strRoleID=="1201")
+	{
+		return 2;
+	}
+	else if (strRoleID=="1202")
+	{
+		return 2;
+	}
+	else if (strRoleID=="1301")
+	{
+		return 3;
+	}
+	else if (strRoleID=="1401")
+	{
+		return 4;
+	}
+	else if (strRoleID=="1801")
+	{
+		return 8;
+	}
+	else if (strRoleID=="1901")
+	{
+		return 9;
+	}
+	return 0;
+	//return m_pRoleInfoIni->GetIntValue(strRoleID,"vocation");
 }
 
 void SkillParse::CreateHeroSkillInfoByXml(MAPSKILLINFO &mapInfo, string strHeroID)
@@ -912,6 +943,11 @@ void SkillParse::GetSkillPresentByName(XMLDocument *pdoc,set<string>& setName, m
 		if (szUsdseq)
 		{
 			pCurNode->ToElement()->SetAttribute("usdcastseq", szUsdseq);
+			//多段动作处理.暂时只获取光效.
+
+
+
+
 		}
 		//usdtgapresent
 		const char * szUsdtga = pSkillEl->Attribute("usdtgapresent");
@@ -1676,6 +1712,11 @@ void SkillParse::outPutTmeInfo()
 	string strNewFile = m_strWorkDir;
 	strNewFile += "\\processSkillRes\\skill_tme.xml";
 	xmlDoc.SaveFile(strNewFile.c_str());
+	//复制到预加载目录.
+	CopyDir cp;
+	string strDesFile = m_strWorkDir;
+	strDesFile+="\\data\\tpconfig\\preloadroleres\\skill_tme.xml";
+	cp.copyFileToDir(strNewFile,strDesFile);
 }
 
 void SkillParse::outPutStateTmeInfo()
@@ -1885,6 +1926,12 @@ void SkillParse::outCommonPath()
 	string strNewFile = m_strWorkDir;
 	strNewFile += "\\processSkillRes\\common.xml";
 	xmlDoc.SaveFile(strNewFile.c_str());
+
+	//复制到预加载目录.
+	CopyDir cp;
+	string strDesFile = m_strWorkDir;
+	strDesFile+="\\data\\tpconfig\\preloadroleres\\common.xml";
+	cp.copyFileToDir(strNewFile,strDesFile);
 }
 
 void SkillParse::ProcessLuaTme()
